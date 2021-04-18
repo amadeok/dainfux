@@ -179,7 +179,7 @@ def start_interpolate_ffmpeg(PID_list, output_file, c, transcode):
     #pipe_video = open_fifo(ffmpeg_pipe)
 
 def start_waifu2x(c, PID_list):
-    R = sp.Popen([f'{c.waifu2x_dir}/waifu2x-ncnn-vulkan', 
+    R = sp.Popen([c.waifu2x_bin, 
     "-i",  "dain",  "-m",     c.waifu2x_model,  
     "-o",  "ffmpeg",  "-n",  "0",  "-s",str(c.waifu2x_scale), 
     "-j", "1:1:1","-p", str(c.imgs_per_frame), "-d", str(c.instance_id),
@@ -264,11 +264,26 @@ def find_ffmpeg_bin(self):
     if os.path.isfile(ffmpeg_bin)  == False:
         ffmpeg_bin = "../Dainfux/ffmpeg-4.3.2/ffmpeg"
         if os.path.isfile(ffmpeg_bin)  == False:
+            print("modified ffmpeg binary missing")
             sys.exit()
         else:
             print("Using pre-built ffmpeg binary")    
             return ffmpeg_bin
     return ffmpeg_bin
+
+def find_waifu2x_bin(self):
+    waifu2x_bin = "../waifu2x-ncnn-vulkan/build/waifu2x-ncnn-vulkan"
+    if os.path.isfile(waifu2x_bin)  == False:
+        waifu2x_bin = "../Dainfux/waifu2x-ncnn-vulkan-20210210/build/waifu2x-ncnn-vulkan"
+        if os.path.isfile(waifu2x_bin)  == False:
+            print("waifu2x binary missing")
+            sys.exit()
+        else:
+            print("Using pre-built waifu2x binary")    
+            return waifu2x_bin
+    return waifu2x_bin
+
+
 def generate_part_data(self):
     part_data = []
 
@@ -338,6 +353,7 @@ class context:
         self.ph_this_bad_th = args.ph_this_bad_th
 
         self.ffmpeg_bin = find_ffmpeg_bin(self)
+        self.waifu2x_bin = find_waifu2x_bin(self)
 
         if self.selective_interpolation == 1:# and self.waifu2x_scale != 0:       
             if not os.path.isfile(self.process_dir + '/' + 'parts.txt'):
@@ -400,10 +416,7 @@ class context:
             self.part_data = self.debug_parts
         self.pipe_counter_t = 0
         self.pipe_counter_i = 0
-        self.waifu2x_dir = "../waifu2x-ncnn-vulkan/build/"
-        if os.path.isfile(self.waifu2x_dir + "waifu2x-ncnn-vulkan")  == False:
-            print("waifu2x binary missing")
-            sys.exit()
+
 
 
     def add_more(self, image_io_reader, frames_list):
