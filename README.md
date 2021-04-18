@@ -86,3 +86,12 @@ wget -O model_weights/best.pth http://vllab1.ucmerced.edu/~wenbobao/DAIN/best.pt
 cp -a ../Dainfux/DAIN/. .
 
 
+example command:
+python -W ignore colab_interpolate.py     --netName DAIN_slowmotion --time_step 0.5 --input_file input.mp4 --output_dir /home/ --enable_transcoder 0 --overwrite 0 --upscale_only 0  --selective_interpolation 0 --dual_instance 0   --waifu2x_scale 2 --waifu2x_model ../waifu2x-ncnn-vulkan/models/models-upconv_7_anime_style_art_rgb --ph_this_bad_th 150
+
+
+Licences:
+all the modified source code is provided in the terms of their original creators
+
+
+
