@@ -206,3 +206,13 @@ def ret_pipe_desc():
 def send_sigterm(c, PID_list):
     os.kill(PID_list[1].pid, signal.SIGTERM)
     os.kill(PID_list[0].pid, signal.SIGTERM)
+
+def get_tot_photosensitive_frames(c):
+    loop_nb = 0
+    u = 0
+    try: 
+        while loop_nb <= c.nb_parts_tot:
+            u += c.part_data[loop_nb][5]
+            loop_nb += 2
+        print(f"Total number of frames to interpolate: {u}")
+    except: print(f"Total number of frames to interpolate: {u}")

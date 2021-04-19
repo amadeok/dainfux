@@ -1,26 +1,36 @@
-import os
+import os,sys
 import datetime
 import argparse
 import numpy
 import networks
-import  torch
-modelnames =  networks.__all__
+no_cuda = 0
+if "--count_ph" in sys.argv:
+    no_cuda = 1
+    #ret = sys.argv.remove("--count_ph")
+if not no_cuda:
+    import  torch
+    modelnames =  networks.__all__
 # import datasets
 datasetNames = ('Vimeo_90K_interp') #datasets.__all__
 
 parser = argparse.ArgumentParser(description='DAIN')
 
 parser.add_argument('--debug',action = 'store_true', help='Enable debug mode')
-parser.add_argument('--netName', type=str, default='DAIN',
+
+if no_cuda == 0:
+    parser.add_argument('--netName', type=str, default='DAIN',
                     choices = modelnames,help = 'model architecture: ' +
                         ' | '.join(modelnames) +
                         ' (default: DAIN)')
+    parser.add_argument('--datasetName', default='Vimeo_90K_interp',
+                        choices= datasetNames,nargs='+',
+                        help='dataset type : ' +
+                            ' | '.join(datasetNames) +
+                            ' (default: Vimeo_90K_interp)')
+else: 
+    parser.add_argument('--netName', type=str, default='None')
+    parser.add_argument('--datasetName', default='None')
 
-parser.add_argument('--datasetName', default='Vimeo_90K_interp',
-                    choices= datasetNames,nargs='+',
-                    help='dataset type : ' +
-                        ' | '.join(datasetNames) +
-                        ' (default: Vimeo_90K_interp)')
 parser.add_argument('--datasetPath',default='',help = 'the path of selected datasets')
 parser.add_argument('--dataset_split', type = int, default=97, help = 'Split a dataset into trainining and validation by percentage (default: 97)')
 
@@ -59,7 +69,10 @@ parser.add_argument('--pretrained', dest='SAVED_MODEL', default=None, help ='pat
 parser.add_argument('--no-date', action='store_true', help='don\'t append date timestamp to folder' )
 parser.add_argument('--use_cuda', default= True, type = bool, help='use cuda or not')
 parser.add_argument('--use_cudnn',default=1,type=int, help = 'use cudnn or not')
-parser.add_argument('--dtype', default=torch.cuda.FloatTensor, choices = [torch.cuda.FloatTensor,torch.FloatTensor],help = 'tensor data type ')
+if no_cuda == 0:
+    parser.add_argument('--dtype', default=torch.cuda.FloatTensor, choices = [torch.cuda.FloatTensor,torch.FloatTensor],help = 'tensor data type ')
+else:
+    parser.add_argument('--dtype', default=None)
 # parser.add_argument('--resume', default='', type=str, help='path to latest checkpoint (default: none)')
 
 
@@ -98,7 +111,10 @@ parser.add_argument('--debug_nb_parts', type = int, default = 0, help='custom nu
 parser.add_argument('--upscale_only', type = int, default = 0, help='upscale only mode')
 parser.add_argument('--ph_this_bad_th', type = int, default = 100, help='threshold for ffmpeg photosensitivity filters low badness fix')
 
-
+parser.add_argument('--count_ph', type = int, default = 0, help='count photosensitivity frames')
+parser.add_argument('--use_newbadness', type = int, default = 0, help='use newbadness instead of this_badness')
+parser.add_argument('--intro_skip', type = str, default = '0:0-0:0', help='specified part will not be interpolated')
+parser.add_argument('--ending_skip', type = str, default = '0:0-0:0', help='specified part will not be interpolated')
 
 
 args = parser.parse_args()
@@ -145,8 +161,9 @@ with open(args.arg, 'w') as f:
     print(args,file=f)
     f.close()
 if args.use_cudnn:
-    print("cudnn is used")
-    torch.backends.cudnn.benchmark = True  # to speed up the
+    if not no_cuda:
+        print("cudnn is used")
+        torch.backends.cudnn.benchmark = True  # to speed up the
 else:
     print("cudnn is not used")
     torch.backends.cudnn.benchmark = False  # to speed up the

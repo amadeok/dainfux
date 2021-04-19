@@ -145,6 +145,7 @@ typedef struct PhotosensitivityContext
     int os;
     int oe;
     int this_badness_thres;
+    int use_newbadness;
     /* Circular buffer */
     int history[MAX_FRAMES];
     int history_pos;
@@ -175,6 +176,8 @@ static const AVOption photosensitivity_options[] = {
     {"ispeed", "set intermediate speed", OFFSET(Ispeed), AV_OPT_TYPE_DOUBLE, {.dbl = 1}, 0.1, 3, FLAGS},
     {"log", "turn on log or not", OFFSET(log), AV_OPT_TYPE_INT, {.i64 = 0}, 0, 50, FLAGS},
     {"this_badness_thres", "threshold for this_badness", OFFSET(this_badness_thres), AV_OPT_TYPE_BOOL, {.i64 = 100}, 0, 10000, FLAGS},
+    {"use_newbadness", "use newbadness instead of thisbadness", OFFSET(use_newbadness), AV_OPT_TYPE_BOOL, {.i64 = 100}, 0, 1, FLAGS},
+
     {"fpsfix60", "fix for duplicated frames in 60fps videos", OFFSET(fpsfix60), AV_OPT_TYPE_BOOL, {.i64 = 0}, 0, 1, FLAGS},
 
     {"target_dir", "where to save parts", OFFSET(target_dir), AV_OPT_TYPE_STRING, {.str = "/home/"}, .flags = FLAGS},
@@ -520,15 +523,24 @@ static int filter_frame(AVFilterLink *inlink, AVFrame *in)
     */
     if (s->export_data == 4)
     {
-        if (totFrames > intro_start && totFrames < intro_end || totFrames > outro_start && totFrames < outro_end
-         || new_badness < s->badness_threshold)
-            wtinterpolate_frame = 0;
-        else if (current_this_badness > s->this_badness_thres)
-            wtinterpolate_frame = 1;
-        else wtinterpolate_frame = 0;
+        if (s->use_newbadness == 0)
+        {
+            if (totFrames > intro_start && totFrames < intro_end || totFrames > outro_start && totFrames < outro_end || this_badness < s->this_badness_thres)
+                wtinterpolate_frame = 0;
+            else
+                wtinterpolate_frame = 1;
+        }
+        else
+        {
+            if (totFrames > intro_start && totFrames < intro_end || totFrames > outro_start && totFrames < outro_end || new_badness < s->badness_threshold)
+                wtinterpolate_frame = 0;
+            else if (current_this_badness > s->this_badness_thres)
+                wtinterpolate_frame = 1;
+            else
+                wtinterpolate_frame = 0;
+        }
         array_frame_counter++;
         wtinterpolateArray[array_frame_counter] = wtinterpolate_frame;
-
         if (block_frame_counter == 24)
         {
             inter_frame_threshold = 5;
@@ -585,13 +597,13 @@ static int filter_frame(AVFilterLink *inlink, AVFrame *in)
             // fprintf(fd, "%6d ", part[part_number][4]); // actual start frame
             // fprintf(fd, "%6d ", part[part_number][5]); //actual end frame
             fprintf(fd, "\n");
-          //  fflush(fd);
+            //  fflush(fd);
             //    delta_frames = part[part_number][2] - part[part_number[1];
 
             for (current_part_start; current_part_start < part_end_frame; current_part_start++)
                 fprintf(fd2, "%d ", wtinterpolateArray[current_part_start]);
             fprintf(fd2, "\n");
-           // fflush(fd2);
+            // fflush(fd2);
 
             part_number++;
             part[part_number][1] = part[part_number - 1][2];

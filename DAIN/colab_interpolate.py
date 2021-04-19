@@ -1,11 +1,9 @@
 import time
 import os, sys, io, signal, fcntl, subprocess as sp
-from torch.autograd import Variable
 import numpy as np
 import numpy
 from my_args import args
 from imageio import imread, imsave
-from AverageMeter import  *
 import shutil
 import datetime
 from various import * #create_pipes, open_fifo, pipe_array, check_key_presses, draw_index_and_save, ret_pipe_desc, transcode
@@ -19,10 +17,14 @@ import warnings
 warnings.filterwarnings("ignore")
 from transcode import transcode_v2
 
-if args.upscale_only == 0:
+
+
+if args.upscale_only == 0 and args.count_ph == 0:
     import torch
     import networks
     torch.backends.cudnn.benchmark = True
+    from torch.autograd import Variable
+    from AverageMeter import  *
 
 ffmpeg_pipe = f"/tmp/ffmpeg_pipe"
 frame_id = '1a'
@@ -74,6 +76,7 @@ def vram_init(dummy_img):
 PID_list = [pid_obj(os.getpid(), '1dain')]
 
 c = context(args)
+
 
 #join_parts(c.process_dir, c.nb_parts_tot, c.filename )
 start_it = 1

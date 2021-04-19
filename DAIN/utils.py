@@ -45,11 +45,20 @@ def get_file_info(input_file):
     return [width, height, input_fps]
 
 ffmpeg_dir = "/home/amadeok/ffmpeg_static/"
+def interpret_intro_end(string ):
+    string_l = string.split('-')
+    start = string_l[0].split(':') 
+    start_sec = (int(start[0])*60)+int(start[1])
 
-
+    end = string_l[1].split(':') 
+    end_sec = (int(end[0])*60)+int(end[1])
+    return start_sec, end_sec
 def get_part_data(c):
     print("Extracting data")
-    vf = f"photosensitivity=bypass=1:export_data=4:is=59:ie=59:os=1290:oe=1290:f=24:target_dir='{c.process_dir}':log=0:this_badness_thres={c.ph_this_bad_th}"
+    i_s, i_e = interpret_intro_end(c.intro_skip)
+    e_s, e_e = interpret_intro_end(c.ending_skip)
+
+    vf = f"photosensitivity=bypass=1:export_data=4:is={i_s}:ie={i_e}:os={e_s}:oe={e_e}:f=24:target_dir='{c.process_dir}':log=0:this_badness_thres={c.ph_this_bad_th}:use_newbadness={c.use_newbadness} "
     os.system(
         f"{c.ffmpeg_bin} -i '{c.input_file}' -vf {vf} -loglevel 32 -f null  /dev/null")
     print("Part data extraction finished")
@@ -57,17 +66,27 @@ def get_part_data(c):
     #is=1:ie=155:os=1390:oe=1430 one piece 945
     #is=59:ie=130:os=1290:oe=1380 kimetsu no yaiba
 
+def check_index(c, count):
+    if count == c.part_indexes[c.index_counter]:
+        c.index_counter+=1
+        return 1
+    else: return 0
 
 def get_tot_photosensitive_frames(c):
     loop_nb = 0
     u = 0
-    try: 
-        while loop_nb <= nb_parts_tot:
-            u += part_data[loop_nb][5]
-            loop_nb += 2
-        print(f"{c.log}Total number of frames to interpolate: {u}")
-        print(f"{c.log}Interpolation bypass: {int_bypass}")
-    except: print(f"Total number of frames to interpolate: {u}")
+    while loop_nb <= c.nb_parts_tot:
+        if check_index(c, loop_nb):
+            u += c.part_data[loop_nb][5]
+            if c.part_indexes[c.index_counter] == None:
+                break
+        if loop_nb == 5:
+            pass
+        loop_nb += 1
+
+    print(f"{c.log}Total number of frames to interpolate: {u}")
+    #print(f"{c.log}Interpolation bypass: {int_bypass}")
+    #except: print(f"Total number of frames to interpolate: {u}")
     return u
 
 # if get_part_info == 1:
@@ -355,7 +374,10 @@ class context:
         self.ffmpeg_bin = find_ffmpeg_bin(self)
         self.waifu2x_bin = find_waifu2x_bin(self)
 
-        if self.selective_interpolation == 1:# and self.waifu2x_scale != 0:       
+        self.use_newbadness = args.use_newbadness
+        if self.selective_interpolation == 1:# and self.waifu2x_scale != 0:
+            self.intro_skip = args.intro_skip
+            self.ending_skip = args.ending_skip       
             if not os.path.isfile(self.process_dir + '/' + 'parts.txt'):
                 get_part_data(self)
             self.part_data = read_data(self.process_dir, 'parts')
@@ -410,15 +432,16 @@ class context:
             self.debug_nb_parts = args.debug_nb_parts
             self.nb_parts_tot = self.debug_nb_parts
         else:
-            self.debug_nb_parts = None
+            self.debug_nb_parts = 0
         self.debug_parts = gen_debug_parts(self)
         if args.use_debug_parts and self.selective_interpolation == 1:
             self.part_data = self.debug_parts
         self.pipe_counter_t = 0
         self.pipe_counter_i = 0
-
-
-
+        if args.count_ph:
+            get_tot_photosensitive_frames(self)
+            sys.exit()
+        else: self.tot_frames_to_int = get_tot_photosensitive_frames(self)
     def add_more(self, image_io_reader, frames_list):
         self.R = image_io_reader
         self.frames = frames_list
