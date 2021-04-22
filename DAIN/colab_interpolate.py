@@ -73,22 +73,24 @@ def vram_init(dummy_img):
         X1 = X1.cuda()
     y_s, offset, filter = model(torch.stack((X0, X1),dim = 0))
 
-PID_list = [pid_obj(os.getpid(), '1dain')]
 
 c = context(args)
+c.PID_list.append(pid_obj(os.getpid(), '1dain'))
 
 
 #join_parts(c.process_dir, c.nb_parts_tot, c.filename )
 start_it = 1
 if c.waifu2x_scale != 0 and start_it:
-    start_waifu2x(c, PID_list)
+    start_waifu2x(c, c.PID_list)
 
-thread1 = threading.Thread(target=check_key_presses, args=(PID_list, signals, c))
+thread1 = threading.Thread(target=check_key_presses, args=(c.PID_list, signals, c))
 thread1.start()
 
 
 if args.enable_transcoder:
     start_time = time.time()
+    print(f"{c.log} Starting transcode")
+
     transcode_v2(c)
     print(f"{c.log}transcode took ",time.time() - start_time)
     #transcode_t = threading.Thread(taR.get=transcode, args=(c,))
@@ -169,14 +171,14 @@ S = None; dummy_img = None
 
 time.sleep(0.5)
 if c.dual_instance and c.instance_id == 0:
-    start_another_instance(c, PID_list)
+    start_another_instance(c,c.PID_list)
 
 frames = []
 fd2 = 0
 
 R = imageio.read(c.input_file, "ffmpeg")
 
-c.add_more(R, frames)
+c.add_more(R, frames, None)
 
 #draw_index_and_save(frames[0], 'f', save_pngs, (c.downscale_resolution))
 
@@ -311,7 +313,7 @@ def process_task(c, which):
                 if pipe_to_ffmpeg:
                     if c.waifu2x_scale != 0:
                         os.read(fd1, 1) #wait for waif2x to open the pipes before launching ffmpeg
-                    start_interpolate_ffmpeg(PID_list, f'{count:0>4d}', c, '')      
+                    start_interpolate_ffmpeg(c.PID_list, f'{count:0>4d}', c, '')      
                     if c.waifu2x_scale == 0: #open ffmpeg pipe
                         fd2 = open_fifo('ffmpeg_pipe', '', c)
 
@@ -324,7 +326,7 @@ def process_task(c, which):
                     else: wtinterpolate = 1 # interpolate all frames
 
                     if bypass == 0:
-                        signals[1] = wtinterpolate
+                         signals[1] = wtinterpolate
                 
                     if index() == final_frame-1: 
                         signals[2] = 1 #it's the last frame of the part, signal to waifu
@@ -399,6 +401,7 @@ def process_task(c, which):
 
 if c.selective_interpolation == 1:
     process_task(c, None)
+    finish(c, c.PID_list)
 elif c.selective_interpolation == 0:
     if c.dual_instance == 0:
         process_task(c, 'even')
@@ -410,12 +413,7 @@ elif c.selective_interpolation == 0:
             process_task(c, 'even')
         else:
             process_task(c, 'odd')
-        
-        end_fifo = 'end_pipe'
-        if os.path.exists(end_fifo) == False:  os.mkfifo(end_fifo)
-        if c.instance_id == 0:  fd= os.open(end_fifo, os.O_WRONLY)
-        else: fd= os.open(end_fifo, os.O_RDONLY)
-        os.close(fd)
-        send_sigterm(c, PID_list)
+        finish(c, PID_list)
+
 
 

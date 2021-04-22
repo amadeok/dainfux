@@ -115,6 +115,7 @@ parser.add_argument('--count_ph', type = int, default = 0, help='count photosens
 parser.add_argument('--use_newbadness', type = int, default = 0, help='use newbadness instead of this_badness')
 parser.add_argument('--intro_skip', type = str, default = '0:0-0:0', help='specified part will not be interpolated')
 parser.add_argument('--ending_skip', type = str, default = '0:0-0:0', help='specified part will not be interpolated')
+parser.add_argument('--wti_offset', type = int, default = 0, help='wti offset')
 
 
 args = parser.parse_args()

@@ -5,8 +5,10 @@ import subprocess as sp
 import ffmpeg, math
 import numpy as np
 from PIL import Image
+from various import find_wti_offset
 waifu2x_dir = "/home/amadeok/waifu2x-ncnn-vulkan/build"
-def read_data(parts_dir, file_name):
+def read_data(c, file_name):
+    parts_dir = c.process_dir
     data = []
     ins = open(f'{parts_dir}/{file_name}.txt', "r")
     for line in ins:
@@ -15,6 +17,7 @@ def read_data(parts_dir, file_name):
         data.append(numbers)  # Add the "row" to your list.
         #arr = np.array([numbers])
     data.pop(0)
+
    # print(f"{file_name} data read")
     ins.close()
 
@@ -57,10 +60,12 @@ def get_part_data(c):
     print("Extracting data")
     i_s, i_e = interpret_intro_end(c.intro_skip)
     e_s, e_e = interpret_intro_end(c.ending_skip)
-
-    vf = f"photosensitivity=bypass=1:export_data=4:is={i_s}:ie={i_e}:os={e_s}:oe={e_e}:f=24:target_dir='{c.process_dir}':log=0:this_badness_thres={c.ph_this_bad_th}:use_newbadness={c.use_newbadness} "
+    if not os.path.isfile(c.input_file):
+        print("Input file not found, exiting")
+        sys.exit()
+    vf = f"photosensitivity=bypass=1:export_data=4:is={i_s}:ie={i_e}:os={e_s}:oe={e_e}:f=24:target_dir='{c.process_dir}':log=1:this_badness_thres={c.ph_this_bad_th}:use_newbadness={c.use_newbadness} "
     os.system(
-        f"{c.ffmpeg_bin} -i '{c.input_file}' -vf {vf} -loglevel 32 -f null  /dev/null")
+        f"{c.ffmpeg_bin} -i '{c.input_file}' -vf {vf} -loglevel 32 -f null  /dev/null > dump")
     print("Part data extraction finished")
 
     #is=1:ie=155:os=1390:oe=1430 one piece 945
@@ -168,6 +173,18 @@ def check_missing(c, which):
             return 1 #some missing
     return 0 #none missing
 
+def start_ffmpeg_wti(c):
+    pixel_format = 'rgba'
+    vf = f"photosensitivity=bypass=1:export_data=4:is=0:ie=0:os=0:oe=0:f=24:target_dir='{c.process_dir}/test':log=33:this_badness_thres={c.ph_this_bad_th}:use_newbadness={c.use_newbadness}"
+
+    ffmpeg_pipe = f"/tmp/ffmpeg_pipe__0_id{c.instance_id}"
+    cmd_command = [f'{c.ffmpeg_bin}',  '-r', f'{c.target_fps}', '-pix_fmt', pixel_format, '-s', c.target_resolution_s,
+        '-f', 'rawvideo', '-i',  ffmpeg_pipe, '-vf', vf, '-f', 'null',  '/dev/null',  '-loglevel', '-8']# '>', f'dump']
+    execute = sp.Popen(cmd_command, stdout=sp.PIPE,     stderr=sp.PIPE )
+
+    return execute
+
+
 def start_interpolate_ffmpeg(PID_list, output_file, c, transcode):
 
     if transcode:  pipe_count = c.pipe_counter_t
@@ -214,7 +231,7 @@ def start_another_instance(c, PID_list):
     "--overwrite",  str(c.overwrite),   "--mode",
     str(c.mode), "--dual_instance",  "1",   "--waifu2x_scale",
      str(c.waifu2x_scale),   "--waifu2x_model", str(c.waifu2x_model),
-     "--instance_id", "1", "--start_offset", "2", "--selective_interpolation",
+     "--instance_id", "1", "--wti_offset", str(c.wti_offset), "--selective_interpolation",
      str(c.selective_interpolation), "--debug_nb_parts",  str(c.debug_nb_parts),
      "--upscale_only", str(c.upscale_only)])
     PID_list.append(pid_obj(R.pid, 'dainfu_'))
@@ -302,7 +319,16 @@ def find_waifu2x_bin(self):
             return waifu2x_bin
     return waifu2x_bin
 
-
+def modify_wtinterpolate_data(self):
+    nb_items_rm = abs(self.wti_offset-1)
+    for y in range(len(self.wtinterpolate_data)):
+        for z in range(nb_items_rm):
+            if nb_items_rm > 0:
+                self.wtinterpolate_data[y].pop(0)
+                self.wtinterpolate_data[y].append(0)
+            elif nb_items_rm < 0:
+                self.wtinterpolate_data[y].insert(0, 0)
+                self.wtinterpolate_data[y].pop(len(self.wtinterpolate_data[y])-1)
 def generate_part_data(self):
     part_data = []
 
@@ -359,13 +385,15 @@ class context:
     def __init__(self, args):
         self.filename = os.path.basename(args.input_file)
         self.filename_no_ext, self.file_extension = os.path.splitext(self.filename)
-
+        self.instance_id = args.instance_id
+        self.PID_list = []
         self.input_file = args.input_file
         self.output_dir = args.output_dir
         self.process_dir = self.output_dir + '/' + self.filename_no_ext
 
         self.mode = args.mode
-
+        self.pipe_counter_t = 0
+        self.pipe_counter_i = 0
         self.selective_interpolation = args.selective_interpolation
         self.waifu2x_scale = args.waifu2x_scale
         self.upscale_only = args.upscale_only
@@ -373,20 +401,10 @@ class context:
 
         self.ffmpeg_bin = find_ffmpeg_bin(self)
         self.waifu2x_bin = find_waifu2x_bin(self)
+        self.log = f"Dain ID {args.instance_id}:"
 
         self.use_newbadness = args.use_newbadness
-        if self.selective_interpolation == 1:# and self.waifu2x_scale != 0:
-            self.intro_skip = args.intro_skip
-            self.ending_skip = args.ending_skip       
-            if not os.path.isfile(self.process_dir + '/' + 'parts.txt'):
-                get_part_data(self)
-            self.part_data = read_data(self.process_dir, 'parts')
-            self.wtinterpolate_data =  read_data(self.process_dir, 'wtinterpolate')
-        else:
-            self.part_data = generate_part_data(self)
-            self.wtinterpolate_data = None
 
-        self.nb_parts_tot = len(self.part_data)
         self.overwrite = args.overwrite
         self.ffmpeg_log_level = args.ffmpeg_log_level
         self.ffmpeg_codec = args.ffmpeg_codec
@@ -404,6 +422,26 @@ class context:
             self.target_resolution = [self.input_resolution[0]*self.waifu2x_scale,self.input_resolution[1]*self.waifu2x_scale, ]
         else: self.target_resolution = self.input_resolution
         self.target_resolution_s = f"{self.target_resolution[0]}x{self.target_resolution[1]}"
+        if self.selective_interpolation == 1:# and self.waifu2x_scale != 0:
+            self.intro_skip = args.intro_skip
+            self.ending_skip = args.ending_skip       
+            if not os.path.isfile(self.process_dir + '/' + 'parts.txt'):
+                if args.instance_id == 0:
+                    get_part_data(self)
+            self.part_data = read_data(self, 'parts')
+            self.wtinterpolate_data =  read_data(self, 'wtinterpolate')
+            if self.instance_id == 0:
+                self.wti_offset = find_wti_offset(self)
+            else: 
+                print(f"{self.log} Getting wti from argument: {args.wti_offset} ")
+                self.wti_offset = args.wti_offset
+            #if self.wtinterpolate_data != 0:
+            modify_wtinterpolate_data(self)
+
+        else:
+            self.part_data = generate_part_data(self)
+            self.wtinterpolate_data = None
+        self.nb_parts_tot = len(self.part_data)
 
 
         self.imgs_per_frame = int((self.target_fps * 1001 / 1000) / (self.input_fps * 1001 / 1000))
@@ -416,7 +454,6 @@ class context:
             self.downscale_resolution = [self.input_resolution[0]//self.waifu2x_scale, self.input_resolution[1]//self.waifu2x_scale]
         else: self.downscale_resolution = None
         self.start_offset = args.start_offset
-        self.instance_id = args.instance_id
         self.dual_instance = args.dual_instance
         self.waifu2x_model = args.waifu2x_model 
         if os.path.isdir(self.process_dir) == False:
@@ -427,7 +464,6 @@ class context:
         else:
             self.part_indexes = find_parts(self)
         self.index_counter = 0
-        self.log = f"Dain ID {self.instance_id}:"
         if args.debug_nb_parts:
             self.debug_nb_parts = args.debug_nb_parts
             self.nb_parts_tot = self.debug_nb_parts
@@ -436,13 +472,13 @@ class context:
         self.debug_parts = gen_debug_parts(self)
         if args.use_debug_parts and self.selective_interpolation == 1:
             self.part_data = self.debug_parts
-        self.pipe_counter_t = 0
-        self.pipe_counter_i = 0
+
         if args.count_ph:
             get_tot_photosensitive_frames(self)
             sys.exit()
         else: self.tot_frames_to_int = get_tot_photosensitive_frames(self)
-    def add_more(self, image_io_reader, frames_list):
+
+    def add_more(self, image_io_reader, frames_list, PID_list):
         self.R = image_io_reader
         self.frames = frames_list
     def reset_vals(self):

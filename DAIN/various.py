@@ -1,5 +1,6 @@
 import os, sys, io, struct, signal, fcntl, time, select
 import termios, tty, threading
+import imageio, numpy as np
 from PIL import Image, ImageDraw
 exiting = 0
 
@@ -207,6 +208,16 @@ def send_sigterm(c, PID_list):
     os.kill(PID_list[1].pid, signal.SIGTERM)
     os.kill(PID_list[0].pid, signal.SIGTERM)
 
+def finish(c, PID_list):
+    print(f"{c.log} Opening end pipe")
+    end_fifo = 'end_pipe'
+    if os.path.exists(end_fifo) == False:  os.mkfifo(end_fifo)
+    if c.instance_id == 0:  fd= os.open(end_fifo, os.O_WRONLY)
+    else: fd= os.open(end_fifo, os.O_RDONLY)
+    print(f"{c.log} End pipe opened, exiting")
+    #os.close(fd)
+    send_sigterm(c, PID_list)
+
 def get_tot_photosensitive_frames(c):
     loop_nb = 0
     u = 0
@@ -216,3 +227,91 @@ def get_tot_photosensitive_frames(c):
             loop_nb += 2
         print(f"Total number of frames to interpolate: {u}")
     except: print(f"Total number of frames to interpolate: {u}")
+
+
+def mse(imageA, imageB):
+	# NOTE: the two images must have the same dimension
+	err = np.sum((imageA.astype("float") - imageB.astype("float")) ** 2)
+	err /= float(imageA.shape[0] * imageA.shape[1])
+	return err
+
+def compare_lists(list_a, list_b, start, end, ph_thres, full_list):
+    import math
+    difference_found = 0
+    for x in range(end-start):
+        A = list_a[x+start][1]; B = list_b[x+start]
+        #print (f" {A} {B}")
+        if A != B:
+            #print(f"lists different x:{x}; {A}, {B}")
+            if not math.isclose(list_a[x+start][2], ph_thres, abs_tol = 25):    
+                #print(f"[2]: {list_a[x+start][2]}")
+                difference_found += 1
+            #return 1
+    return difference_found
+
+def find_wti_offset(c):
+    import cv2
+    import imageio
+    from itertools import chain
+    from utils import start_ffmpeg_wti
+    R = imageio.read(c.input_file, "ffmpeg")
+    def ind():
+        return R._BaseReaderWriter_last_index
+    counter = 0
+    print(f"{c.log} Finding offset...")
+    frames = []
+    wti_countinuous = []
+    wti_countinuous = list(chain.from_iterable(c.wtinterpolate_data))
+    execute = start_ffmpeg_wti(c)
+
+   # frames.append(frame_obj(R.get_next_data(), R._BaseReaderWriter_last_index))
+    fd2 = open_fifo('ffmpeg_pipe', '', c)
+
+    for y in range(1000):
+
+        frames.append(frame_obj(R.get_next_data(), R._BaseReaderWriter_last_index))
+        #F0 =  draw_index_and_save(frames[ind()], 'aT', None, None) 
+        F0 = Image.fromarray(frames[ind()].frame)
+        pipe_array(F0.convert('RGBA'), 'to_bytes',  b'\x00\x00\x00', b'\x00\x00\x00',  'ffmpeg')
+
+    os.close(fd2)
+    out, error_msg = execute.communicate()
+    strings = out.decode("utf-8").split('\n')
+    strings.pop(len(strings)-1)
+    compare = []
+    for v in range(len(strings)):
+            strings[v] = int(strings[v])
+            #print(f"{v+1} {strings[v]}")
+            if strings[v] > c.ph_this_bad_th:
+                wti = 1
+            else: wti = 0 
+            compare.append((v, wti, strings[v]))
+
+    real_wti = []
+    dif = 1
+    offset = None
+    compare_ins = compare[:]
+    compare_pop = compare[:]
+    wti_countinuous_ins = wti_countinuous[:]
+    wti_countinuous_pop = wti_countinuous[:]
+    for y in range(10): 
+        dif = compare_lists(compare, wti_countinuous_ins, 50, 999, c.ph_this_bad_th, strings)
+        if dif < 5:
+            print ("Found wti offset by inserting 1 into  wti_continuous")
+            offset = y
+            break
+        wti_countinuous_ins.insert(0, (0, 0))
+
+    if dif > 5 and not offset:
+        for y in range(10): 
+            dif = compare_lists(compare, wti_countinuous_pop, 50, 990, c.ph_this_bad_th, strings)
+            if dif < 5:
+                print ("Found wti offset by popping 1 from wti_continuous")
+                offset = -y
+                break; 
+            wti_countinuous_pop.pop(0)
+
+    if not offset:
+        print("Unable to find wti offset")
+        return -1
+    return offset

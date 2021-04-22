@@ -117,6 +117,8 @@ int intro_start;
 int intro_end;
 int outro_start;
 int outro_end;
+char myfifo0[200];
+int fd0;
 
 typedef struct PhotosensitivityFrame
 {
@@ -146,6 +148,7 @@ typedef struct PhotosensitivityContext
     int oe;
     int this_badness_thres;
     int use_newbadness;
+    int instance_id;
     /* Circular buffer */
     int history[MAX_FRAMES];
     int history_pos;
@@ -175,9 +178,9 @@ static const AVOption photosensitivity_options[] = {
     {"slowspeed", "set slow speed", OFFSET(SlowSpeed), AV_OPT_TYPE_DOUBLE, {.dbl = 0.6}, 0.1, 1, FLAGS},
     {"ispeed", "set intermediate speed", OFFSET(Ispeed), AV_OPT_TYPE_DOUBLE, {.dbl = 1}, 0.1, 3, FLAGS},
     {"log", "turn on log or not", OFFSET(log), AV_OPT_TYPE_INT, {.i64 = 0}, 0, 50, FLAGS},
-    {"this_badness_thres", "threshold for this_badness", OFFSET(this_badness_thres), AV_OPT_TYPE_BOOL, {.i64 = 100}, 0, 10000, FLAGS},
-    {"use_newbadness", "use newbadness instead of thisbadness", OFFSET(use_newbadness), AV_OPT_TYPE_BOOL, {.i64 = 100}, 0, 1, FLAGS},
-
+    {"this_badness_thres", "threshold for this_badness", OFFSET(this_badness_thres), AV_OPT_TYPE_BOOL, {.i64 = 500}, 0, 10000, FLAGS},
+    {"use_newbadness", "use newbadness instead of thisbadness", OFFSET(use_newbadness), AV_OPT_TYPE_BOOL, {.i64 = 0}, 0, 1, FLAGS},
+    {"instance_id", "id of the instance ", OFFSET(use_newbadness), AV_OPT_TYPE_BOOL, {.i64 = 0}, 0, 1, FLAGS},
     {"fpsfix60", "fix for duplicated frames in 60fps videos", OFFSET(fpsfix60), AV_OPT_TYPE_BOOL, {.i64 = 0}, 0, 1, FLAGS},
 
     {"target_dir", "where to save parts", OFFSET(target_dir), AV_OPT_TYPE_STRING, {.str = "/home/"}, .flags = FLAGS},
@@ -395,7 +398,7 @@ static int config_input(AVFilterLink *inlink)
     // sigaction(SIGPIPE, &(struct sigaction){SIG_IGN}, NULL);
     if (s->export_data == 4)
     {
-        printf("target_dir %s\n", s->target_dir);
+       // printf("target_dir %s\n", s->target_dir);
         intro_start = s->is * s->nb_frames;
         intro_end = s->ie * s->nb_frames;
         outro_start = s->os * s->nb_frames;
@@ -419,13 +422,19 @@ static int config_input(AVFilterLink *inlink)
         // fclose(in_file);
 
         sprintf(parts_dir, "%s/%s", s->target_dir, "parts.txt");
-        printf("parts_dir %s\n", parts_dir);
+    //    printf("parts_dir %s\n", parts_dir);
         sprintf(wtinterpolate_dir, "%s/%s", s->target_dir, "wtinterpolate.txt");
-        printf("wtinterpolate_dir %s\n", wtinterpolate_dir);
+      //  printf("wtinterpolate_dir %s\n", wtinterpolate_dir);
 
         fd = fopen(parts_dir, "w+");
         fd2 = fopen(wtinterpolate_dir, "w+");
         //  fd3 = fopen("/content/misc.txt", "w+");
+    }else if (s->export_data == 5){
+    
+            mkfifo(myfifo0, 0666);
+            printf("PH ffmpeg id %d opening pipe %s\n", s->instance_id, myfifo0);
+            
+
     }
     //  pthread_t inter;
     //  pthread_create(&inter, NULL, wtinterpolateT, NULL);
@@ -610,6 +619,8 @@ static int filter_frame(AVFilterLink *inlink, AVFrame *in)
 
             part[part_number][3] = block_to_interpolate;
         }
+    }else if (s->export_data == 5){
+    
     }
 
     i2++;
@@ -634,7 +645,7 @@ static int filter_frame(AVFilterLink *inlink, AVFrame *in)
     if (array[i2 - 1] <= s->badness_threshold && array[i2] > s->badness_threshold)
     {
         thresholdSurpassed = 1;
-        if (s->log)
+        if (s->log<30)
             printf("up /");
     }
     else
@@ -643,7 +654,7 @@ static int filter_frame(AVFilterLink *inlink, AVFrame *in)
     if (array[i2 - 1] >= s->badness_threshold && array[i2] < s->badness_threshold)
     {
         goneBelowThreshold = 1;
-        if (s->log)
+        if (s->log<30)
             printf("dw /");
     }
     else
@@ -675,8 +686,11 @@ static int filter_frame(AVFilterLink *inlink, AVFrame *in)
         printf("frames up: %i \n", counterUp);
         printf("frames below: %i \n", counterBel);
     }
-
-    if (s->log <= 2 && s->log > 0)
+    if (s->log == 33)
+    {
+        printf("%i\n", this_badness);
+    }
+    else if (s->log <= 2 && s->log > 0)
     {
         if (s->log == 5)
         {
