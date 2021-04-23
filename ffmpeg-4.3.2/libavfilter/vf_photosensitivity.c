@@ -471,62 +471,7 @@ static int filter_frame(AVFilterLink *inlink, AVFrame *in)
     av_log(s, AV_LOG_VERBOSE, "badness: %6d -> %6d / %6d (%3d%% - %s)\n",
            current_badness, new_badness, s->badness_threshold,
            100 * new_badness / s->badness_threshold, new_badness < s->badness_threshold ? "OK" : "EXCEEDED");
-    /*
-        i5++;
-    if (i5 == 1294399)
-        i5 = 0;
-    if (i5 % 2 == 0)
-    {
-        array2[i5] = this_badness;
-    }
-    else if (i5 % 2 != 0)
-    {
-        array2[i5] = this_badness;
-    }
-    if (globalFpsfix60)
-    {
-
-        if (array2[i5 - 1] > 150 && array2[i5] < 25)
-        {
-            printf("1'");
-            this_badness = array2[i5 - 1] * 0.17;
-        }
-
-        if (array2[i5 - 2] > 150 && array2[i5] < 25 && array2[i5 - 1] < 25)
-        {
-            printf("2'");
-            this_badness = array2[i5 - 2] * 0.17;
-        }
-
-        if (array2[i5 - 3] > 150 && array2[i5] < 25 && array2[i5 - 1] < 25 && array2[i5 - 2] < 25)
-        {
-            printf("3'");
-            this_badness = array2[i5 - 3] * 0.17;
-        }
-
-        if (array2[i5 - 4] > 150 && array2[i5] < 25 && array2[i5 - 1] < 25 && array2[i5 - 2] < 25 && array2[i5 - 3] < 25)
-
-        {
-            printf("4'");
-            this_badness = array2[i5 - 4] * 0.17;
-        }
-        if (array2[i5 - 5] > 150 && array2[i5] < 25 && array2[i5 - 1] < 25 && array2[i5 - 2] < 25 && array2[i5 - 3] < 25 && array2[i5 - 4] < 25)
-        {
-            printf("5'");
-            this_badness = array2[i5 - 5] * 0.17;
-        }
-    }
-        if (globalLog >= 4)
-    {
-
-        printf("%i / ", i5);
-        printf("[%d ", array2[i5]);
-        printf(" %d ", array2[i5 - 1]);
-        printf(" %d", array2[i5 - 2]);
-        printf(" %d]", array2[i5 - 3]);
-
-        printf(" ** %d ** \n", this_badness);
-    }
+  
     // globalCurrentBadness = current_badness;
     globalNewBadness = new_badness;
     */

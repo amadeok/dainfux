@@ -78,7 +78,7 @@ c = context(args)
 c.PID_list.append(pid_obj(os.getpid(), '1dain'))
 
 
-#join_parts(c.process_dir, c.nb_parts_tot, c.filename )
+#join_parts(c)
 start_it = 1
 if c.waifu2x_scale != 0 and start_it:
     start_waifu2x(c, c.PID_list)
@@ -391,7 +391,7 @@ def process_task(c, which):
         count+=1
     time.sleep(0.5)
     if check_missing(c, 0) == 0 and check_missing(c, 1) == 0:
-        join_parts(c.process_dir, c.nb_parts_tot, c.filename )
+        join_parts(c )
         print(f"{c.log} Parts joined")
     else:
         print(f"{c.log}: Some parts missing, didn't join")

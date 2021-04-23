@@ -238,23 +238,32 @@ def start_another_instance(c, PID_list):
 
 #start_another_instance(c, pip)
 
-def join_parts(output_dir, nb_parts, filename ):
-    file_list = f'{output_dir}/files.txt'
+
+def add_audio_and_subs(c):
+    process = sp.Popen([f'ffmpeg',  '-i',  
+    f'{c.joined_file}', '-i', f'{c.input_file}',
+    '-c',   "copy",   '-map',   "0:v",      '-c',   "copy",   '-map',   "1:a",   '-map', '1:s?',  '-c:s', 'mov_text', f'{c.final_file}',
+    '-loglevel', '-8'])
+    process.wait()
+    print(f"{c.log} Added audio and subtitles")
+
+def join_parts(c ):
+    file_list = f'{c.process_dir}/files.txt'
     try: f = open(file_list, "w")
     except:    pass
-    for x in range(nb_parts):
-        f.writelines([f"\nfile '{output_dir}/{x:04}.mp4'"])
+    for x in range(c.nb_parts_tot):
+        f.writelines([f"\nfile '{c.process_dir}/{x:04}.mp4'"])
         x+=1
     f.close()
 
-    output_file = f'{output_dir}joined_{os.path.splitext(filename)[0]}.mp4'
     (
     ffmpeg
         .input(file_list, format='concat', safe=0)
-        .output(output_file, c='copy')
+        .output(c.joined_file, c='copy')
         .overwrite_output()
         .run()
     )
+    add_audio_and_subs(c)
 
 
 def find_parts(self):
@@ -399,6 +408,8 @@ class context:
         self.upscale_only = args.upscale_only
         self.ph_this_bad_th = args.ph_this_bad_th
 
+
+
         self.ffmpeg_bin = find_ffmpeg_bin(self)
         self.waifu2x_bin = find_waifu2x_bin(self)
         self.log = f"Dain ID {args.instance_id}:"
@@ -416,6 +427,9 @@ class context:
         if self.upscale_only == 0:
             self.target_fps = self.input_fps / self.time_step
         else: self.target_fps = self.input_fps
+
+        self.joined_file =  f'{self.output_dir}joined_{os.path.splitext(self.filename)[0]}.mp4'
+        self.final_file = f'{self.output_dir}{os.path.splitext(self.filename)[0]}_{round(float(self.target_fps))}fps.mp4'
 
         self.input_resolution_s =  f"{self.input_resolution[0]}x{self.input_resolution[1]}"
         if self.upscale_only == 1:
