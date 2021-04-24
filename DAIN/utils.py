@@ -1,4 +1,4 @@
-import os, sys
+import os, sys, distro
 import psutil
 import GPUtil
 import subprocess as sp
@@ -305,9 +305,10 @@ def get_tot_frames(input_file):
     return totalframecount
 
 def find_ffmpeg_bin(self):
+    dist = distro.linux_distribution()
     ffmpeg_bin = "../ffmpeg-4.3.2/ffmpeg"
     if os.path.isfile(ffmpeg_bin)  == False:
-        ffmpeg_bin = "../Dainfux/ffmpeg-4.3.2/ffmpeg"
+        ffmpeg_bin = f"../Dainfux/ffmpeg-4.3.2/ubuntu{dist[1]}/ffmpeg"
         if os.path.isfile(ffmpeg_bin)  == False:
             print("modified ffmpeg binary missing")
             sys.exit()
@@ -317,9 +318,10 @@ def find_ffmpeg_bin(self):
     return ffmpeg_bin
 
 def find_waifu2x_bin(self):
+    dist = distro.linux_distribution()
     waifu2x_bin = "../waifu2x-ncnn-vulkan/build/waifu2x-ncnn-vulkan"
     if os.path.isfile(waifu2x_bin)  == False:
-        waifu2x_bin = "../Dainfux/waifu2x-ncnn-vulkan-20210210/build/waifu2x-ncnn-vulkan"
+        waifu2x_bin = f"../Dainfux/waifu2x-ncnn-vulkan-20210210/build/ubuntu{dist[1]}/waifu2x-ncnn-vulkan"
         if os.path.isfile(waifu2x_bin)  == False:
             print("waifu2x binary missing")
             sys.exit()
