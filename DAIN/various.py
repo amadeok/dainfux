@@ -118,7 +118,7 @@ def pipe_array(image_obj, mode, signals, frame_id, ffmpeg):
     if not ffmpeg: 
         os.write(dest, size_bytes)
         ready = os.read(fd1, 1)
-        print(len(frame_id))
+        #print(len(frame_id))
     
     if not ffmpeg:
         os.write(dest, frame_id)
