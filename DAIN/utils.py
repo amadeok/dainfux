@@ -219,7 +219,7 @@ def start_waifu2x(c, PID_list):
     "-i",  "dain",  "-m",     c.waifu2x_model,  
     "-o",  "ffmpeg",  "-n",  "0",  "-s",str(c.waifu2x_scale), 
     "-j", "1:1:1","-p", str(c.imgs_per_frame), "-d", str(c.instance_id),
-    "-z", str(c.upscale_only)])
+    "-z", str(c.upscale_only), "-b", str(c.waifu2x_verbose)])
     PID_list.append(pid_obj(R.pid, '0waifu2x'))
 
 def start_another_instance(c, PID_list):
@@ -493,7 +493,7 @@ class context:
             get_tot_photosensitive_frames(self)
             sys.exit()
         else: self.tot_frames_to_int = get_tot_photosensitive_frames(self)
-
+	self.waifu2x_verbose = args.waifu2x_verbose
     def add_more(self, image_io_reader, frames_list, PID_list):
         self.R = image_io_reader
         self.frames = frames_list
