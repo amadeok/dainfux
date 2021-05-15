@@ -94,6 +94,11 @@ if args.enable_transcoder or args.count_ph == 2:
     print(f"{c.log}transcode took ",time.time() - start_time)
     #transcode_t = threading.Thread(taR.get=transcode, args=(c,))
     #transcode_t.start()
+    if check_missing(c, 0) == 0 and check_missing(c, 1) == 0:
+        join_parts(c )
+        print(f"{c.log} Parts joined")
+    else:
+        print(f"{c.log}: Some parts missing, didn't join")
     if args.count_ph: sys.exit()
 #time.sleep(10)
 bypass = 0

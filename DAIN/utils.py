@@ -80,16 +80,19 @@ def check_index(c, count):
 def get_tot_photosensitive_frames(c):
     loop_nb = 0
     u = 0
-    while loop_nb <= c.nb_parts_tot:
-        if check_index(c, loop_nb):
-            u += c.part_data[loop_nb][5]
-            if c.part_indexes[c.index_counter] == None:
-                break
-        if loop_nb == 5:
-            pass
-        loop_nb += 1
+    try: 
+        while loop_nb <= c.nb_parts_tot:
+            if check_index(c, loop_nb):
+                u += c.part_data[loop_nb][5]
+                if c.part_indexes[c.index_counter] == None:
+                    break
+            if loop_nb == 5:
+                pass
+            loop_nb += 1
+        print(f"{c.log}Total number of frames to interpolate: {u}")
+    
+    except: print(f"{c.log}Total number of frames to interpolate: {u}")
 
-    print(f"{c.log}Total number of frames to interpolate: {u}")
     #print(f"{c.log}Interpolation bypass: {int_bypass}")
     #except: print(f"Total number of frames to interpolate: {u}")
     return u
