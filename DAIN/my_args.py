@@ -2,13 +2,14 @@ import os,sys
 import datetime
 import argparse
 import numpy
-import networks
 no_cuda = 0
 if "--count_ph" in sys.argv:
     no_cuda = 1
     #ret = sys.argv.remove("--count_ph")
 if not no_cuda:
     import  torch
+    import networks
+
     modelnames =  networks.__all__
 # import datasets
 datasetNames = ('Vimeo_90K_interp') #datasets.__all__

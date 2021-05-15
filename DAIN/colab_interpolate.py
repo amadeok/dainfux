@@ -18,7 +18,6 @@ warnings.filterwarnings("ignore")
 from transcode import transcode_v2
 
 
-
 if args.upscale_only == 0 and args.count_ph == 0:
     import torch
     import networks
@@ -82,12 +81,12 @@ c.PID_list.append(pid_obj(os.getpid(), '1dain'))
 start_it = 1
 if c.waifu2x_scale != 0 and start_it:
     start_waifu2x(c, c.PID_list)
+if args.count_ph == 0:
+    thread1 = threading.Thread(target=check_key_presses, args=(c.PID_list, signals, c))
+    thread1.start()
 
-thread1 = threading.Thread(target=check_key_presses, args=(c.PID_list, signals, c))
-thread1.start()
 
-
-if args.enable_transcoder:
+if args.enable_transcoder or args.count_ph == 2:
     start_time = time.time()
     print(f"{c.log} Starting transcode")
 
@@ -95,6 +94,7 @@ if args.enable_transcoder:
     print(f"{c.log}transcode took ",time.time() - start_time)
     #transcode_t = threading.Thread(taR.get=transcode, args=(c,))
     #transcode_t.start()
+    if args.count_ph: sys.exit()
 #time.sleep(10)
 bypass = 0
 

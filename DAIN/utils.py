@@ -411,6 +411,7 @@ class context:
         self.ph_this_bad_th = args.ph_this_bad_th
 
 
+        self.waifu2x_verbose = args.waifu2x_verbose
 
         self.ffmpeg_bin = find_ffmpeg_bin(self)
         self.waifu2x_bin = find_waifu2x_bin(self)
@@ -446,7 +447,7 @@ class context:
                     get_part_data(self)
             self.part_data = read_data(self, 'parts')
             self.wtinterpolate_data =  read_data(self, 'wtinterpolate')
-            if self.instance_id == 0:
+            if self.instance_id == 0 and args.count_ph == 0:
                 self.wti_offset = find_wti_offset(self)
             else: 
                 print(f"{self.log} Getting wti from argument: {args.wti_offset} ")
@@ -489,11 +490,12 @@ class context:
         if args.use_debug_parts and self.selective_interpolation == 1:
             self.part_data = self.debug_parts
 
-        if args.count_ph:
+        if args.count_ph == 1:
             get_tot_photosensitive_frames(self)
             sys.exit()
-        else: self.tot_frames_to_int = get_tot_photosensitive_frames(self)
-	self.waifu2x_verbose = args.waifu2x_verbose
+        else: 
+            self.tot_frames_to_int = get_tot_photosensitive_frames(self)
+
     def add_more(self, image_io_reader, frames_list, PID_list):
         self.R = image_io_reader
         self.frames = frames_list
