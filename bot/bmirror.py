@@ -24,7 +24,7 @@ from draw_cursor import generate_cursor, draw_cursor
 parser = argparse.ArgumentParser(description='bot')
 parser.add_argument('--xywh', type = str, default = '1920:0:1200:1000:0:0.6', help='x y width height, windo x offset, scale')
 parser.add_argument('--sleep', type = float, default = 5, help='loop sleep time')
-parser.add_argument('--images', type = str, default = 'colab_captcha1.png!-234!8:riconetti9.png!0!0', help='images to find and click')
+parser.add_argument('--images', type = str, default = 'colab_captcha1.png!-234!8:colab_captcha3.png!-234!8:riconetti9.png!0!0', help='images to find and click')
 parser.add_argument('--imshow', type = int, default = 1, help='show capture')
 
 args = parser.parse_args()
@@ -108,21 +108,24 @@ with mss.mss() as sct:
             "RGB", scren_shot.size, scren_shot.bgra, "raw", "RGBX")
 
         for n in range(len(images)):
-            images[n][3] = pyautogui.locate(images[n][0], heystack, grayscale=True, confidence=0.70)    
+            images[n][3] = pyautogui.locate(images[n][0], heystack, grayscale=True, confidence=0.70)  
+            
+        for n in range(len(images)):
+            if images[n][3]: 
+                print(images[n][0].filename ,images[n][3])
+                pyautogui.click(images[n][3][0]+images[n][3][2]//2+images[n][1] + x, images[n][3][1]+images[n][3][3]//2+images[n][2] + y)    
+                
         if args.imshow:
 
             img = numpy.asarray(scren_shot)
             img = cv2.resize(img, (int((w)*scale), int((h)*scale)))   
             cv2.imshow("mirror", img)
-            if cv2.waitKey(25) & 0xFF == ord("q") or exit:
+            if cv2.waitKey(args.sleep*1000) & 0xFF == ord("q") or exit:
                 cv2.destroyAllWindows()
                 exit = 1; 
                 break
-        for n in range(len(images)):
-            if images[n][3]: 
-                print(images[n][0].filename ,images[n][3])
-                pyautogui.click(images[n][3][0]+images[n][3][2]//2+images[n][1] + x, images[n][3][1]+images[n][3][3]//2+images[n][2] + y)
-        time.sleep(args.sleep)
+
+        #time.sleep(args.sleep)
         
 
 
