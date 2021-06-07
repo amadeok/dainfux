@@ -35,6 +35,7 @@ x = int(xywh[0]); y = int(xywh[1]); w = int(xywh[2]); h = int(xywh[3])
 window_x_of = int(xywh[4]); scale = float(xywh[5])
 
 images = args.images.split(":")
+print(images)
 
 for g in range (len(images)):
     images[g] = images[g].split("!")
@@ -120,7 +121,7 @@ with mss.mss() as sct:
         for n in range(len(images)):
             if images[n][3]: 
                 print(images[n][0].filename ,images[n][3])
-                pyautogui.click(images[n][3][0]+images[n][3][2]//2+images[n][1], images[n][3][1]+images[n][3][3]//2+images[n][2])
+                pyautogui.click(images[n][3][0]+images[n][3][2]//2+images[n][1] + x, images[n][3][1]+images[n][3][3]//2+images[n][2] + y)
         time.sleep(args.sleep)
         
 
