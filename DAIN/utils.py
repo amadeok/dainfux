@@ -1,3 +1,4 @@
+from MegaDepth.util.util import mkdir
 import os, sys, distro
 import psutil
 import GPUtil
@@ -5,10 +6,13 @@ import subprocess as sp
 import ffmpeg, math
 import numpy as np
 from PIL import Image
-from various import find_wti_offset
+import various  
 waifu2x_dir = "/home/amadeok/waifu2x-ncnn-vulkan/build"
-def read_data(c, file_name):
-    parts_dir = c.process_dir
+def read_data(c, file_name, no_skip=None):
+    if no_skip == None:
+        parts_dir = c.process_dir
+    else: 
+        parts_dir = c.process_dir + "/" + "temp2"
     data = []
     ins = open(f'{parts_dir}/{file_name}.txt', "r")
     for line in ins:
@@ -56,16 +60,33 @@ def interpret_intro_end(string ):
     end = string_l[1].split(':') 
     end_sec = (int(end[0])*60)+int(end[1])
     return start_sec, end_sec
-def get_part_data(c):
+
+def get_part_data(c, no_skip=None):
     print("Extracting data")
-    i_s, i_e = interpret_intro_end(c.intro_skip)
-    e_s, e_e = interpret_intro_end(c.ending_skip)
+    if no_skip == None:
+        i_s, i_e = interpret_intro_end(c.intro_skip)
+        e_s, e_e = interpret_intro_end(c.ending_skip)
+        target_dir = c.process_dir
+    else:
+        print("Data extractor with no skip")
+        i_s, i_e, e_s, e_e = 0, 0, 0, 0
+        target_dir = c.process_dir + "/" + "temp2"
+        if os.path.isdir(target_dir) == False:
+            mkdir(target_dir)
+
     if not os.path.isfile(c.input_file):
         print("Input file not found, exiting")
         sys.exit()
-    vf = f"photosensitivity=bypass=1:export_data=4:is={i_s}:ie={i_e}:os={e_s}:oe={e_e}:f=24:target_dir='{c.process_dir}':log=0:this_badness_thres={c.ph_this_bad_th}:use_newbadness={c.use_newbadness} "
-    p = sp.call([f"{c.ffmpeg_bin}",  "-i",  f'{c.input_file}',  "-vf", f"{vf}",  "-loglevel",  "32",  "-f", "null",   "/dev/null"])
-    print("Part data extraction finished")
+    vf = f"photosensitivity=bypass=1:export_data=4:is={i_s}:ie={i_e}:os={e_s}:oe={e_e}:f=24:target_dir='{target_dir}':log=0:this_badness_thres={c.ph_this_bad_th}:use_newbadness={c.use_newbadness} "
+    cmd =  f"{c.ffmpeg_bin} -i '{c.input_file}' -vf {vf} -loglevel 32 -f null  /dev/null > dump"
+    if no_skip == None:
+        subp = sp.call([f"{c.ffmpeg_bin}", f"-i", f'{c.input_file}', "-vf", f"{vf}", "-loglevel", "32", "-f", "null",  "/dev/null"])
+        #subp.wait()
+        print("Part data extraction finished")
+    else:
+        subp = sp.Popen([f"{c.ffmpeg_bin}", f"-i", f'{c.input_file}', "-vf", f"{vf}", "-loglevel", "32", "-f", "null",  "/dev/null"])
+        return subp.pid
+
 
     #is=1:ie=155:os=1390:oe=1430 one piece 945
     #is=59:ie=130:os=1290:oe=1380 kimetsu no yaiba
@@ -80,18 +101,16 @@ def get_tot_photosensitive_frames(c):
     loop_nb = 0
     u = 0
     try: 
-        while loop_nb <= c.nb_parts_tot:
-            if check_index(c, loop_nb):
-                u += c.part_data[loop_nb][5]
-                if c.part_indexes[c.index_counter] == None:
-                    break
-            if loop_nb == 5:
-                pass
-            loop_nb += 1
-        print(f"{c.log}Total number of frames to interpolate: {u}")
-    
-    except: print(f"{c.log}Total number of frames to interpolate: {u}")
-
+      while loop_nb <= c.nb_parts_tot:
+          if check_index(c, loop_nb):
+              u += c.part_data[loop_nb][5]
+              if c.part_indexes[c.index_counter] == None:
+                  break
+          if loop_nb == 5:
+              pass
+          loop_nb += 1
+      print(f"{c.log}Total number of frames to interpolate: {u}")    
+    except:  print(f"{c.log}Total number of frames to interpolate: {u}")
     #print(f"{c.log}Interpolation bypass: {int_bypass}")
     #except: print(f"Total number of frames to interpolate: {u}")
     return u
@@ -401,6 +420,7 @@ class context:
         self.instance_id = args.instance_id
         self.PID_list = []
         self.input_file = args.input_file
+        print("Input file:",  self.input_file)
         self.output_dir = args.output_dir
         self.process_dir = self.output_dir + '/' + self.filename_no_ext
 
@@ -450,7 +470,7 @@ class context:
             self.part_data = read_data(self, 'parts')
             self.wtinterpolate_data =  read_data(self, 'wtinterpolate')
             if self.instance_id == 0 and args.count_ph == 0:
-                self.wti_offset = find_wti_offset(self)
+                self.wti_offset = various.find_wti_offset(self)
             else: 
                 print(f"{self.log} Getting wti from argument: {args.wti_offset} ")
                 self.wti_offset = args.wti_offset

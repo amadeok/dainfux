@@ -2,6 +2,7 @@ import os, sys, io, struct, signal, fcntl, time, select
 import termios, tty, threading
 import imageio, numpy as np
 from PIL import Image, ImageDraw
+import utils
 exiting = 0
 
 ffmpeg_pipe = f"/tmp/ffmpeg_pipe"
@@ -261,7 +262,13 @@ def find_wti_offset(c):
     print(f"{c.log} Finding offset...")
     frames = []
     wti_countinuous = []
-    wti_countinuous = list(chain.from_iterable(c.wtinterpolate_data))
+
+    Pid = utils.get_part_data(c, True)
+    time.sleep(10)
+    os.kill(Pid, 15)
+    no_skip_data = utils.read_data(c, 'wtinterpolate', True)
+    ori = c.wtinterpolate_data[:]
+    wti_countinuous = list(chain.from_iterable(no_skip_data))
     execute = start_ffmpeg_wti(c)
 
    # frames.append(frame_obj(R.get_next_data(), R._BaseReaderWriter_last_index))
@@ -313,5 +320,6 @@ def find_wti_offset(c):
 
     if not offset:
         print("Unable to find wti offset")
-        return -1
+        sys.exit()
+    
     return offset
