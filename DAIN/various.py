@@ -266,7 +266,13 @@ def find_wti_offset(c):
     Pid = utils.get_part_data(c, True)
     time.sleep(10)
     os.kill(Pid, 15)
-    no_skip_data = utils.read_data(c, 'wtinterpolate', True)
+    time.sleep(3)
+
+    try: no_skip_data = utils.read_data(c, 'wtinterpolate', True)
+    except:
+        time.sleep(3)
+        no_skip_data = utils.read_data(c, 'wtinterpolate', True)
+        
     ori = c.wtinterpolate_data[:]
     wti_countinuous = list(chain.from_iterable(no_skip_data))
     execute = start_ffmpeg_wti(c)
