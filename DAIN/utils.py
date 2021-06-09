@@ -63,9 +63,8 @@ def get_part_data(c):
     if not os.path.isfile(c.input_file):
         print("Input file not found, exiting")
         sys.exit()
-    vf = f"photosensitivity=bypass=1:export_data=4:is={i_s}:ie={i_e}:os={e_s}:oe={e_e}:f=24:target_dir='{c.process_dir}':log=1:this_badness_thres={c.ph_this_bad_th}:use_newbadness={c.use_newbadness} "
-    os.system(
-        f"{c.ffmpeg_bin} -i '{c.input_file}' -vf {vf} -loglevel 32 -f null  /dev/null > dump")
+    vf = f"photosensitivity=bypass=1:export_data=4:is={i_s}:ie={i_e}:os={e_s}:oe={e_e}:f=24:target_dir='{c.process_dir}':log=0:this_badness_thres={c.ph_this_bad_th}:use_newbadness={c.use_newbadness} "
+    p = sp.call([f"{c.ffmpeg_bin}",  "-i",  f'{c.input_file}',  "-vf", f"{vf}",  "-loglevel",  "32",  "-f", "null",   "/dev/null"])
     print("Part data extraction finished")
 
     #is=1:ie=155:os=1390:oe=1430 one piece 945
