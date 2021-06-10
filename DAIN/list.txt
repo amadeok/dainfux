@@ -1,8 +1,5 @@
 [Erai-raws] Black Clover (TV) - !X!X [720p][Multiple Subtitle].mkv
---intro_skip '3:0-4:30'
+--intro_skip '3:15-4:40'
 --ending_skip '21:30-23:55'
-1
-2
-3
-4
-6    
+16 '3:14-4:41' '21:30-23:55'
+17
