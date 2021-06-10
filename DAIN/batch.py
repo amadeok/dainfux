@@ -61,12 +61,12 @@ for x in range(len(file_list)):
         out_dir = os.path.dirname(curr_file) + f"/int/"
     print("||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||")
     print("||| current file:", curr_file, "|||",  "intro_skip: ", intro_skip, "intro_skip: ",  ending_skip, "|||", "time_step:", time_step)
-    transcode_cmd = f"python colab_interpolate.py --time_step {time_step} --count_ph 2 --input_file '{curr_file}' --output_dir {out_dir} --selective_interpolation 1 --intro_skip {intro_skip} --ending_skip {ending_skip}"
     full_cmd = f"python -W ignore colab_interpolate.py     --netName DAIN_slowmotion --time_step {time_step} --input_file '/content/drive/MyDrive/{curr_file}' --output_dir /content/drive/MyDrive/DAIN --enable_transcoder 0 --overwrite 0 --upscale_only 0  --selective_interpolation 1 --dual_instance 1   --waifu2x_scale 2 --waifu2x_model ../waifu2x-ncnn-vulkan/models/models-upconv_7_anime_style_art_rgb --ph_this_bad_th 500 --use_debug_parts 0 --debug_nb_parts 0 --intro_skip {intro_skip} --ending_skip {ending_skip}"
 
     if transcode == 0:
         cmd = full_cmd
     else: 
+        transcode_cmd = f"python colab_interpolate.py --time_step {time_step} --count_ph 2 --input_file '{curr_file}' --output_dir {out_dir} --selective_interpolation 1 --intro_skip {intro_skip} --ending_skip {ending_skip}"
         cmd = transcode_cmd
     print("current command:", cmd)
 
