@@ -1,5 +1,8 @@
 import os, sys, subprocess as sp
 
+if len(sys.argv) > 1:
+    transcode = int(sys.argv[1])
+else: transcode = 0
 
 def read_file():
     global file_list; global file_name; global intro_skip_ori; global ending_skip_ori; global time_step_ori; global pad
@@ -54,9 +57,17 @@ for x in range(len(file_list)):
 
 
     curr_file = f"{file_name[0]}{number}{file_name[1]}"
+    if transcode:
+        out_dir = os.path.dirname(curr_file) + f"/int/"
     print("||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||")
     print("||| current file:", curr_file, "|||",  "intro_skip: ", intro_skip, "intro_skip: ",  ending_skip, "|||", "time_step:", time_step)
-    command = f"python -W ignore colab_interpolate.py     --netName DAIN_slowmotion --time_step {time_step} --input_file '/content/drive/MyDrive/{curr_file}' --output_dir /content/drive/MyDrive/DAIN --enable_transcoder 0 --overwrite 0 --upscale_only 0  --selective_interpolation 1 --dual_instance 1   --waifu2x_scale 2 --waifu2x_model ../waifu2x-ncnn-vulkan/models/models-upconv_7_anime_style_art_rgb --ph_this_bad_th 500 --use_debug_parts 0 --debug_nb_parts 0 --intro_skip {intro_skip} --ending_skip {ending_skip}"
-    print("current command:", command)
+    transcode_cmd = f"python colab_interpolate.py --time_step {time_step} --count_ph 2 --input_file '{curr_file}' --output_dir {out_dir} --selective_interpolation 1 --intro_skip {intro_skip} --ending_skip {ending_skip}"
+    full_cmd = f"python -W ignore colab_interpolate.py     --netName DAIN_slowmotion --time_step {time_step} --input_file '/content/drive/MyDrive/{curr_file}' --output_dir /content/drive/MyDrive/DAIN --enable_transcoder 0 --overwrite 0 --upscale_only 0  --selective_interpolation 1 --dual_instance 1   --waifu2x_scale 2 --waifu2x_model ../waifu2x-ncnn-vulkan/models/models-upconv_7_anime_style_art_rgb --ph_this_bad_th 500 --use_debug_parts 0 --debug_nb_parts 0 --intro_skip {intro_skip} --ending_skip {ending_skip}"
 
-    os.system(command)
+    if transcode == 0:
+        cmd = full_cmd
+    else: 
+        cmd = transcode_cmd
+    print("current command:", cmd)
+
+    os.system(cmd)
