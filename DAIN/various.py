@@ -195,8 +195,8 @@ def draw_index_and_save(frame_obj, a_or_b, save_pngs, resize):
     Dtemp = Image.fromarray(frame_obj.frame)
     if resize:
         Dtemp = Dtemp.resize(resize)
-    d0 = ImageDraw.Draw(Dtemp)
-    d0.text((10,10), f"{frame_obj.index}{a_or_b}", fill=(255,255,0))
+    #d0 = ImageDraw.Draw(Dtemp)
+    #d0.text((10,10), f"{frame_obj.index}{a_or_b}", fill=(255,255,0))
 
     if save_pngs:
         Dtemp.save(f"{save_pngs}/{frame_obj.index:0>4d}{a_or_b}.png")
