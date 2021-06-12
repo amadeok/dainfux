@@ -72,7 +72,7 @@ def get_part_data(c, no_skip=None):
         i_s, i_e, e_s, e_e = 0, 0, 0, 0
         target_dir = c.process_dir + "/" + "temp2"
         if os.path.isdir(target_dir) == False:
-            mkdir(target_dir)
+            os.mkdir(target_dir)
 
     if not os.path.isfile(c.input_file):
         print("Input file not found, exiting")
