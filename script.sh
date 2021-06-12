@@ -7,11 +7,6 @@ pip install gputil
 pip install distro
 
 
-cd /content/
-mkdir dainfux
-cd dainfux
-git clone https://github.com/amadeok/Dainfux
-
 wget -qO - https://packages.lunarg.com/lunarg-signing-key-pub.asc | sudo apt-key add -
 sudo wget -qO /etc/apt/sources.list.d/lunarg-vulkan-1.2.154-bionic.list https://packages.lunarg.com/vulkan/1.2.154/lunarg-vulkan-1.2.154-bionic.list
 sudo apt update
