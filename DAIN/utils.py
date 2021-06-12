@@ -1,4 +1,4 @@
-from MegaDepth.util.util import mkdir
+#from MegaDepth.util.util import mkdir
 import os, sys, distro
 import psutil
 import GPUtil
@@ -331,7 +331,9 @@ def find_ffmpeg_bin(self):
     if os.path.isfile(ffmpeg_bin)  == False:
         ffmpeg_bin = f"../Dainfux/ffmpeg-4.3.2/ubuntu{dist[1]}/ffmpeg"
         if os.path.isfile(ffmpeg_bin)  == False:
-            print("modified ffmpeg binary missing")
+            if os.path.isdir(f"../Dainfux/") == False:
+                print("Dainfux directory missing")
+            print("modified ffmpeg binary missing: ", ffmpeg_bin)
             sys.exit()
         else:
             print("Using pre-built ffmpeg binary")    
@@ -423,7 +425,9 @@ class context:
         print("Input file:",  self.input_file)
         self.output_dir = args.output_dir
         self.process_dir = self.output_dir + '/' + self.filename_no_ext
-
+        if os.path.isfile(f"{self.process_dir}/FINISHED.txt") == True:
+            print("Processing for this file has already been done, exiting")
+            sys.exit()
         self.mode = args.mode
         self.pipe_counter_t = 0
         self.pipe_counter_i = 0

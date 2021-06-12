@@ -411,6 +411,7 @@ elif c.selective_interpolation == 0:
     if c.dual_instance == 0:
         process_task(c, 'even')
         process_task(c, 'odd')
+        with open(f"{self.process_dir}/FINISHED.txt", "w+") as out: pass
         send_sigterm(c, PID_list)
 
     elif c.dual_instance == 1:
