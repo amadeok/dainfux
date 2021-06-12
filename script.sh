@@ -38,6 +38,18 @@ git clone -b colab-compatibility --depth 1 https://github.com/AlphaGit/DAIN /con
 cd /content/dainfux/DAIN
 git log -1
 
+cd /content/dainfux/DAIN
+mkdir model_weights
+wget -O model_weights/best.pth http://vllab1.ucmerced.edu/~wenbobao/DAIN/best.pth
+
+CUDA_VISIBLE_DEVICES=0
+sudo apt-get install imagemagick imagemagick-doc
+
+cd /content/dainfux/DAIN
+cp -a ../Dainfux/DAIN/. .
+
+chmod 755 "/content/dainfux/Dainfux/waifu2x-ncnn-vulkan-20210210/build/ubuntu18.04/waifu2x-ncnn-vulkan"
+chmod 755 "/content/dainfux/Dainfux/ffmpeg-4.3.2/ubuntu18.04/ffmpeg"
 
 
 
