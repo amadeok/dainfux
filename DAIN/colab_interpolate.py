@@ -269,8 +269,8 @@ def interpolate_and_pipe(c, F0_mod, F1_mod):
         item_to_save =  np.round(item).astype(numpy.uint8)
 
         pilimage = Image.fromarray(item_to_save).convert('RGBA')
-        d0 = ImageDraw.Draw(pilimage)
-        d0.text((10,10), f"{index()-1}b", fill=(255,255,0))
+        #d0 = ImageDraw.Draw(pilimage)
+        #d0.text((10,10), f"{index()-1}b", fill=(255,255,0))
         if save_pngs:
             pilimage.save(f"{save_pngs}/{index()-1:0>4d}b.png")
 
