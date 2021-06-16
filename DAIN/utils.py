@@ -204,7 +204,7 @@ def start_interpolate_ffmpeg(PID_list, output_file, c, transcode):
     # if transcode:
     #     pixel_format = 'rgb24'
     codec = "libx264rgb" # must be libx264rgb for rgb input
-
+    print(f"{c.log} using ffmpeg codec  {codec}")
     vf_command =  ""
     cmd_command = ['ffmpeg',  '-r', f'{c.target_fps}', '-pix_fmt', pixel_format, '-s', c.target_resolution_s,
             '-f', 'rawvideo', '-i',  ffmpeg_pipe, '-vcodec', codec, '-preset', 'medium', '-crf', '18', '-tune', 'animation',
