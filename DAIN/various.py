@@ -131,7 +131,7 @@ def pipe_array(image_obj, mode, signals, frame_id, ffmpeg):
     for v in range(nb_times):
         ret = os.write(dest, bytearr[start:end])
         if not ffmpeg: ready = os.read(fd1, 1)
-        start+= 1048576
+        start+= 1048576 
         end += 1048576
 
     ret = os.write(dest, bytearr[(1048576*nb_times):size])
@@ -286,7 +286,7 @@ def find_wti_offset(c):
         frames.append(frame_obj(R.get_next_data(), R._BaseReaderWriter_last_index))
         #F0 =  draw_index_and_save(frames[ind()], 'aT', None, None) 
         F0 = Image.fromarray(frames[ind()].frame)
-        pipe_array(F0.convert('RGBA'), 'to_bytes',  b'\x00\x00\x00', b'\x00\x00\x00',  'ffmpeg')
+        pipe_array(F0.convert('RGBX'), 'to_bytes',  b'\x00\x00\x00', b'\x00\x00\x00',  'ffmpeg')
 
     os.close(fd2)
     out, error_msg = execute.communicate()

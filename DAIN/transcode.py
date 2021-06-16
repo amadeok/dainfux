@@ -64,6 +64,7 @@ def transcode_v2(c):
 
                 F0 =  draw_index_and_save(frames[index()], 'aT', None, None) #frame a
                 LPB = index().to_bytes(2, 'little') + b'\x61'
+                #F0.convert('RGBA').save("test0.bmp")
                 for x in range(c.imgs_per_frame):
                     pipe_array(F0.convert('RGBA'), 'to_bytes',  b'\x00\x00\x00', LPB,  'ffmpeg')#pipe the first frame at original resolution
                 frames[index()] = None    

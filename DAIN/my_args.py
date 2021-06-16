@@ -4,7 +4,9 @@ import argparse
 import numpy
 no_cuda = 0
 if "--count_ph" in sys.argv:
-    no_cuda = 1
+    n = sys.argv.index('--count_ph')
+    if sys.argv[n+1] != '0':    
+        no_cuda = 1
     #ret = sys.argv.remove("--count_ph")
 if not no_cuda:
     import  torch

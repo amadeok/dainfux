@@ -145,7 +145,7 @@ loop_timer = AverageMeter()
 
 
 #########
-save_pngs = None #f"{picdir}/tmp/"
+save_pngs = None
 #########
 cdir = os.getcwd()
 
@@ -162,17 +162,17 @@ if bypass:
 
 S = imageio.read(c.input_file, "ffmpeg")
 dummy_img = S.get_next_data()
-dummy_img = Image.fromarray(dummy_img)
+dummy_img_ = Image.fromarray(dummy_img)
 
 if c.waifu2x_scale != 0 and c.upscale_only == 0:
-    dummy_img = dummy_img.resize(c.downscale_resolution)
+    dummy_img_ = dummy_img_.resize(c.downscale_resolution)
 #do some dummy VRAM initialization
 if (c.upscale_only == 0):
-    vram_init(dummy_img)
+    vram_init(dummy_img_)
 
 if c.waifu2x_scale != 0:
-    pipe_array(dummy_img.convert('RGBA'), 'BytesIO',  signals, b'\x00\x67',  None) # pipe a dummy image to get settings
-S = None; dummy_img = None
+    pipe_array(dummy_img_.convert('RGBA'), 'BytesIO',  signals, b'\x00\x67',  None) # pipe a dummy image to get settings
+S = None; dummy_img_ = None; dummy_img = None
 
 time.sleep(0.5)
 if c.dual_instance and c.instance_id == 0:
@@ -201,7 +201,7 @@ def interpolate_and_pipe(c, F0_mod, F1_mod):
     intHeight = X0.size(1)
     channels = X0.size(0)
     if not channels == 3:
-        print(f"{c.log}Skipping {filename_frame_1}-{filename_frame_2} -- expected 3 color channels but found {channels}.")
+        print(f"{c.log}Skipping frame {index()} -- expected 3 color channels but found {channels}.")
         return -1
 
     if intWidth != ((intWidth >> 7) << 7):
@@ -296,10 +296,6 @@ def process_task(c, which):
         c.part_indexes = c.part_indexes_even
     elif which == 'odd':
         c.part_indexes = c.part_indexes_odd
-        # for x in range(c.part_data[count][4]):
-        #     c.frames.append(frame_obj(c.R.get_next_data(), c.R._BaseReaderWriter_last_index))
-        #     c.frames[index()] = None
-        # count = 1
 
     for x in range(c.nb_parts_tot):
         curr_file = f"{c.process_dir}/{count:0>4d}.mp4"
@@ -314,7 +310,7 @@ def process_task(c, which):
                 #c.R.set_image_index(start_frame)
                 c.frames.append(frame_obj(c.R.get_next_data(), c.R._BaseReaderWriter_last_index))
                 if start_frame  != index():
-                    print(f"{c.log}warning")
+                    print(f"{c.log} warning")
                 if pipe_to_ffmpeg:
                     if c.waifu2x_scale != 0:
                         os.read(fd1, 1) #wait for waif2x to open the pipes before launching ffmpeg
@@ -339,8 +335,8 @@ def process_task(c, which):
                         
                     c.frames.append(frame_obj(c.R.get_next_data(), c.R._BaseReaderWriter_last_index))
                     in1 = index()
-                    F0 =  draw_index_and_save(c.frames[index()-1], 'a', None, None) #frame a
-                    F1 = Image.fromarray(c.frames[index()].frame) #frame c
+                    F0 =draw_index_and_save(c.frames[index()-1], 'a', None, None) #frame a #Image.open("00001s.png") #
+                    F1 =Image.fromarray(c.frames[index()].frame) #frame c #Image.open("00001s.png") #
 
                     if wtinterpolate == 1 and c.waifu2x_scale != 0:
                         F0_mod = F0.resize(c.downscale_resolution)
@@ -349,7 +345,7 @@ def process_task(c, which):
                         F0_mod = F0
                         F1_mod = F1
                     
-                    draw_index_and_save(c.frames[index()-1], 'a', save_pngs, (c.downscale_resolution))
+                    #draw_index_and_save(c.frames[index()-1], 'a', save_pngs, (c.downscale_resolution))
                     
                     if bypass or wtinterpolate == 0:
                         draw_index_and_save(c.frames[index()-1], 'a', save_pngs, (c.downscale_resolution))
@@ -380,17 +376,11 @@ def process_task(c, which):
         elif c.part_data[count][3] == 1: #and c.selective_interpolation:
 
             skip_photosensitive_part(c, count)
-            # for x in range(c.part_data[count][4]+1):
-            #     c.frames.append(frame_obj(R.get_next_data(), R._BaseReaderWriter_last_index))
-            #     c.frames[index()] = None
+
         else:
             skip_photosensitive_part(c, count)
 
-            # t0 = time.time()
-            # for x in range(c.part_data[count][4]-1):
-            #     c.frames.append(frame_obj(c.R.get_next_data(), c.R._BaseReaderWriter_last_index))
-            #     c.frames[index()] = None
-            # print(f"skipping {c.part_data[count][4]-1} frames took {time.time() - t0}")
+
         if c.part_indexes[c.index_counter] == None:
             break
         count+=1
@@ -411,15 +401,15 @@ elif c.selective_interpolation == 0:
     if c.dual_instance == 0:
         process_task(c, 'even')
         process_task(c, 'odd')
-        with open(f"{self.process_dir}/FINISHED.txt", "w+") as out: pass
-        send_sigterm(c, PID_list)
+        with open(f"{c.process_dir}/FINISHED.txt", "w+") as out: pass
+        send_sigterm(c, c.PID_list)
 
     elif c.dual_instance == 1:
         if c.instance_id == 0:
             process_task(c, 'even')
         else:
             process_task(c, 'odd')
-        finish(c, PID_list)
+        finish(c, c.PID_list)
 
 
 

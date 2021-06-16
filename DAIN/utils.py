@@ -123,17 +123,6 @@ def get_tot_photosensitive_frames(c):
 
 
 
-
-def get_min_decoder_parts():
-    min_number_frames_decoder = 400
-    min_part_decoder = 0
-    u = 0
-    while u <= min_number_frames_decoder:
-        u += part_data[min_part_decoder][5]
-        min_part_decoder += 2
-    return (min_part_decoder + global_start_part) // 2
-
-
 min_parts_decode = 8
 
 
@@ -174,13 +163,6 @@ def getCPUusage():
     return cpu
 
 
-def extract_audio():
-    input_stream = ffmpeg.input(
-        '/content/gdrive/My Drive/{}'.format(input_file))
-    aud = input_stream.audio
-    outAud = ffmpeg.output(
-        aud, "/content/gdrive/My Drive/output/audio.mp3".format(outFld))
-    outAud.overwrite_output().run(capture_stdout=True, capture_stderr=True)
 
 class pid_obj:
     def __init__(self, pid, name):
@@ -212,7 +194,7 @@ def start_interpolate_ffmpeg(PID_list, output_file, c, transcode):
     else:           pipe_count = c.pipe_counter_i
 
     ffmpeg_pipe = f"/tmp/ffmpeg_pipe_{transcode}_{pipe_count}_id{c.instance_id}"
-    pixel_format = 'rgba'
+    pixel_format = 'rgba' 
     print(f"{c.log} starting ffmpeg with {transcode} fifo: {ffmpeg_pipe}")
 
     if os.path.exists(ffmpeg_pipe) == False:
@@ -221,10 +203,11 @@ def start_interpolate_ffmpeg(PID_list, output_file, c, transcode):
 
     # if transcode:
     #     pixel_format = 'rgb24'
+    codec = "libx264" # must be libx264rgb for rgb input
 
     vf_command =  ""
     cmd_command = ['ffmpeg',  '-r', f'{c.target_fps}', '-pix_fmt', pixel_format, '-s', c.target_resolution_s,
-            '-f', 'rawvideo', '-i',  ffmpeg_pipe, '-vcodec', 'libx264', '-preset', 'medium', '-crf', '18', '-tune', 'animation',
+            '-f', 'rawvideo', '-i',  ffmpeg_pipe, '-vcodec', codec, '-preset', 'medium', '-crf', '18', '-tune', 'animation',
              f'{c.process_dir}/{output_file}.mp4', "-y"]
 
     if (c.waifu2x_scale != 0 and not transcode):
