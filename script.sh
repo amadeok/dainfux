@@ -11,6 +11,8 @@ wget -qO - https://packages.lunarg.com/lunarg-signing-key-pub.asc | sudo apt-key
 sudo wget -qO /etc/apt/sources.list.d/lunarg-vulkan-1.2.154-bionic.list https://packages.lunarg.com/vulkan/1.2.154/lunarg-vulkan-1.2.154-bionic.list
 sudo apt update
 sudo apt install vulkan-sdk
+sudo apt-get remove ffmpeg
+sudo apt-get install ffmpeg
 
 cd /content/dainfux
 wget https://github.com/nihui/waifu2x-ncnn-vulkan/archive/refs/tags/20210210.tar.gz
