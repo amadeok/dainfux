@@ -1,13 +1,29 @@
 #from MegaDepth.util.util import mkdir
-import os, sys, distro
+import os, sys, distro, time
 import psutil
 import GPUtil
 import subprocess as sp
-import ffmpeg, math
+import ffmpeg, math, cv2
 import numpy as np
 from PIL import Image
 import various  
-waifu2x_dir = "/home/amadeok/waifu2x-ncnn-vulkan/build"
+import vapoursynth as vs
+from vapoursynth import core
+from datetime import datetime, timedelta
+
+core.std.LoadPlugin(path='/usr/local/lib/libffms2.so') 
+
+t_counter = 0;t0 = 0
+def t(text=None):
+    global t_counter;global t0
+    t_counter+=1
+    if t_counter == 1:
+        t0 = time.time()
+    elif t_counter == 2:
+        t_counter = 0
+        print(f"{text} {time.time()-t0}")
+    return time.time()
+
 def read_data(c, file_name, no_skip=None):
     if no_skip == None:
         parts_dir = c.process_dir
@@ -26,6 +42,7 @@ def read_data(c, file_name, no_skip=None):
     ins.close()
 
     return data
+
 def time_step_calculation():
     INPUT_FILEPATH = f"/content/gdrive/My Drive/{input_file}"
     TARGET_FPS = target_fps
@@ -51,7 +68,6 @@ def get_file_info(input_file):
     input_fps = cap.get(cv2.CAP_PROP_FPS)
     return [width, height, input_fps]
 
-ffmpeg_dir = "/home/amadeok/ffmpeg_static/"
 def interpret_intro_end(string ):
     string_l = string.split('-')
     start = string_l[0].split(':') 
@@ -115,17 +131,6 @@ def get_tot_photosensitive_frames(c):
     #except: print(f"Total number of frames to interpolate: {u}")
     return u
 
-# if get_part_info == 1:
-#     get_part_data()
-# read_data()
-
-# time.sleep(1)
-
-
-
-min_parts_decode = 8
-
-
 
 def get_length(filename):
     ffmpeg_dir = ""
@@ -162,8 +167,6 @@ def getCPUusage():
     # print("Cpu = {}  ".format(cpu), end='')
     return cpu
 
-
-
 class pid_obj:
     def __init__(self, pid, name):
         self.name  = name
@@ -177,11 +180,16 @@ def check_missing(c, which):
     return 0 #none missing
 
 def start_ffmpeg_wti(c):
-    pixel_format = 'rgba'
+    pixel_format = 'rgb24'
     vf = f"photosensitivity=bypass=1:export_data=4:is=0:ie=0:os=0:oe=0:f=24:target_dir='{c.process_dir}/test':log=33:this_badness_thres={c.ph_this_bad_th}:use_newbadness={c.use_newbadness}"
 
     ffmpeg_pipe = f"/tmp/ffmpeg_pipe__0_id{c.instance_id}"
-    cmd_command = [f'{c.ffmpeg_bin}',  '-r', f'{c.target_fps}', '-pix_fmt', pixel_format, '-s', c.target_resolution_s,
+    cmd_command = [f'{c.ffmpeg_bin}',  
+                '-color_primaries', c.color_primaries_ff,
+              '-color_trc', c.color_transfer_ff,
+               '-color_range', c.color_range_ff,
+                '-colorspace', c.color_space_ff, 
+                '-r', f'{c.target_fps}', '-pix_fmt', pixel_format, '-s', c.target_resolution_s,
         '-f', 'rawvideo', '-i',  ffmpeg_pipe, '-vf', vf, '-f', 'null',  '/dev/null',  '-loglevel', '-8']# '>', f'dump']
     execute = sp.Popen(cmd_command, stdout=sp.PIPE,     stderr=sp.PIPE )
 
@@ -194,7 +202,9 @@ def start_interpolate_ffmpeg(PID_list, output_file, c, transcode):
     else:           pipe_count = c.pipe_counter_i
 
     ffmpeg_pipe = f"/tmp/ffmpeg_pipe_{transcode}_{pipe_count}_id{c.instance_id}"
-    pixel_format = 'rgba' 
+    input_pixel_format = 'rgb24' #'rgb24' 
+    output_pixel_format = 'yuv420p' #'rgb24' 
+
     print(f"{c.log} starting ffmpeg with {transcode} fifo: {ffmpeg_pipe}")
 
     if os.path.exists(ffmpeg_pipe) == False:
@@ -203,11 +213,23 @@ def start_interpolate_ffmpeg(PID_list, output_file, c, transcode):
 
     # if transcode:
     #     pixel_format = 'rgb24'
-    codec = "libx264rgb" # must be libx264rgb for rgb input
-    print(f"{c.log} using ffmpeg codec  {codec}")
+    codec = "libx264" 
+
     vf_command =  ""
-    cmd_command = ['ffmpeg',  '-r', f'{c.target_fps}', '-pix_fmt', pixel_format, '-s', c.target_resolution_s,
+    cmd_command = ['ffmpeg',  '-r', f'{c.target_fps}', 
+             '-pix_fmt', input_pixel_format, 
+             '-s', c.target_resolution_s, 
+                '-color_primaries', c.color_primaries_ff,
+              '-color_trc', c.color_transfer_ff,
+               '-color_range', c.color_range_ff,
+                '-colorspace', c.color_space_ff, 
             '-f', 'rawvideo', '-i',  ffmpeg_pipe, '-vcodec', codec, '-preset', 'medium', '-crf', '18', '-tune', 'animation',
+           # '-vf', c.decoder_output_param[1], 
+            '-pix_fmt', output_pixel_format,
+                '-color_primaries', c.color_primaries_ff,
+              '-color_trc', c.color_transfer_ff,
+               '-color_range', c.color_range_ff,
+                '-colorspace', c.color_space_ff, 
              f'{c.process_dir}/{output_file}.mp4', "-y"]
 
     if (c.waifu2x_scale != 0 and not transcode):
@@ -360,9 +382,9 @@ def generate_part_data(self):
         nb_photosensitive_frames = 0
         interpolate_part = 0
 
-    tot_frames = get_tot_frames(self.input_file)
-    nb_parts = tot_frames // block_time
-    rem = tot_frames % block_time
+    self.tot_frames = get_tot_frames(self.input_file)
+    nb_parts = self.tot_frames // block_time
+    rem = self.tot_frames % block_time
     #if rem:  nb_parts +=1
 
     start = 0
@@ -374,14 +396,14 @@ def generate_part_data(self):
             start += block_time
             end += block_time
         if rem:
-            part_data.append((u, start, tot_frames, 0, rem, 0))
+            part_data.append((u, start, self.tot_frames, 0, rem, 0))
     elif self.mode == 'interpolate_with_downscale':
         for u in range(nb_parts):
             part_data.append((u, start, end, 1, block_time, block_time))
             start += block_time
             end += block_time
         if rem:
-            part_data.append((u, start, tot_frames, 1, rem, rem))
+            part_data.append((u, start, self.tot_frames, 1, rem, rem))
     return part_data
 def gen_debug_parts(self):
     part_data = []
@@ -397,6 +419,135 @@ def gen_debug_parts(self):
         start += block_size
         end += block_size
     return part_data
+
+def get_video_metadata(c):
+  vid = ffmpeg.probe(c.input_file)
+  streams = vid['streams']
+  for x in range(len(streams)):
+    if streams[x]['codec_type'] == 'video':
+      #print(streams[x])
+      return streams[x]
+ # asdas
+ffmpeg_vs = {
+    #space
+    'rgb': 'rgb',
+    'bt709': '709',
+    'fcc': 'fcc',
+    'bt470bg': '470bg',
+    'smpte170m': '170m',
+    'smpte240m': '240m',
+    'ycocg': 'ycgco',
+    'bt2020nc': '2020ncl',
+    'bt2020_ncl': '2020ncl',
+    'bt2020c': '2020cl',
+    'bt2020_cl': '2020cl',
+    'smpte2085': 'unspec',
+    'chroma-derived-nc': 'chromancl',
+    'chroma-derived-c': 'chromacl',
+    'ictcp': 'ictcp',
+    #color_trc
+    'bt709': '709',
+    'gamma22': '470m',
+    'gamma28': '470bg',
+    'smpte170m': 'unspec', #?
+    'smpte240m': '240m',
+    'linear': 'linear',
+    'log': 'log100', #?
+    'log100': 'log100',
+    'log_sqrt': 'log316',
+    'log316': 'log316',
+    'iec61966_2_4': 'xvycc',
+    'iec61966-2-4': 'xvycc',
+    'bt1361': 'unspec',
+    'bt1361e': 'unspec',
+    'iec61966_2_1': 'srgb',
+    'iec61966-2-1': 'srgb',
+    'bt2020_10': '2020_10',
+    'bt2020_10bit': '2020_10',
+    'bt2020_12': '2020_12',
+    'bt2020_12bit': '2020_12',
+    'smpte2084': 'st2084',
+    'smpte428': 'unspec',
+    'smpte428_1': 'unspec',
+    'arib-std-b67': 'std-b67',
+    #color_primaries
+    'bt709': '709',
+    'bt470m': '470m',
+    'bt470bg': '470bg',
+    'smpte170m': '170m',
+    'smpte240m': '240m',
+    'film': 'film',
+    'bt2020': '2020',
+    'smpte428': 'xyz',
+    'smpte428_1': 'xyz',
+    'smpte431': 'st431-2',
+    'smpte432': 'st432-1',
+    'jedec-p22': 'jedec-p22',
+    #range
+    'tv': 'limited',
+    'mpeg': 'limited',
+    'pc': 'full',
+    'jpeg': 'full',
+
+}
+
+
+def define_color_attr(c):
+    
+    def set_(str):
+        if str in c.met.keys():
+            value = ffmpeg_vs[c.met[str]]
+            value_ff = c.met[str]
+            if value == 'unspec':
+                if str == "color_range":
+                    value =  'limited'; value_ff = 'tv'
+                else: value = '709'; value_ff = 'bt709'
+                print(f"{c.log} Defaulting {str} to:  {value }")
+            else:
+                print(f"{c.log} Using {str} from metadata:   {value }")
+        else:
+            if str == "color_range":
+                 value =  'limited'; value_ff = 'tv'
+            else: value = value = '709'; value_ff = 'bt709'
+            print(f"{c.log} Defaulting {str} to:  {value }")
+
+        setattr(c, str, value)
+        setattr(c, str+'_ff', value_ff)
+
+    set_('color_range')
+    set_('color_primaries')
+    set_('color_space')
+    set_('color_transfer')
+
+    c.decoder_input_param = ["-color_primaries", c.color_primaries, "-color_trc", c.color_transfer,  
+                            "-colorspace", c.color_space, "-color_range", c.color_range]
+
+    c.decoder_output_param = ["-vf", f"colorspace=primaries={c.color_primaries}:trc={c.color_transfer}:space={c.color_space}:range={c.color_range}" ]
+    return c.decoder_input_param, c.decoder_output_param
+
+def vapoursynth_setup(c):
+    class vs_reader:
+        def __init__(self, c):
+            self.index = -1
+            self.video = core.ffms2.Source(source=c.input_file)
+            first = self.video.get_frame(0)
+            self.vs_metadata = first.props
+            first = None
+            self.video = core.resize.Bicubic(clip=self.video, format=vs.RGB24, matrix_in_s=c.color_space, transfer_in_s=c.color_transfer , primaries_in_s=c.color_primaries ,range_in_s=c.color_range)
+            self.generator = self.video.frames()
+        def get_next_data(self):
+            self.index +=1
+            frame = next(self.generator)
+            r = np.array(frame.get_read_array(0))
+            g = np.array(frame.get_read_array(1))
+            b = np.array(frame.get_read_array(2))
+            #rgb = np.dstack((r,g,b)) 
+            return cv2.merge((r, g, b)) 
+
+    
+    return vs_reader(c)
+
+
 class context:        
 
     def __init__(self, args):
@@ -406,6 +557,10 @@ class context:
         self.PID_list = []
         self.input_file = args.input_file
         print("Input file:",  self.input_file)
+        if os.path.isfile(self.input_file) == False:
+            print("Input file missing, exiting")
+            sys.exit()
+
         self.output_dir = args.output_dir
         self.process_dir = self.output_dir + '/' + self.filename_no_ext
         if os.path.isfile(f"{self.process_dir}/FINISHED.txt") == True:
@@ -448,6 +603,12 @@ class context:
             self.target_resolution = [self.input_resolution[0]*self.waifu2x_scale,self.input_resolution[1]*self.waifu2x_scale, ]
         else: self.target_resolution = self.input_resolution
         self.target_resolution_s = f"{self.target_resolution[0]}x{self.target_resolution[1]}"
+
+        self.met = get_video_metadata(self)
+        define_color_attr(self)
+        if args.count_ph == 0:
+            self.R = vapoursynth_setup(self)
+
         if self.selective_interpolation == 1:# and self.waifu2x_scale != 0:
             self.intro_skip = args.intro_skip
             self.ending_skip = args.ending_skip       
@@ -456,6 +617,7 @@ class context:
                     get_part_data(self)
             self.part_data = read_data(self, 'parts')
             self.wtinterpolate_data =  read_data(self, 'wtinterpolate')
+
             if self.instance_id == 0 and args.count_ph == 0:
                 self.wti_offset = various.find_wti_offset(self)
             else: 
@@ -504,6 +666,25 @@ class context:
             sys.exit()
         else: 
             self.tot_frames_to_int = get_tot_photosensitive_frames(self)
+        self.tot_frames = get_tot_frames(self.input_file)
+        self.nb_interpolated_frames = 0
+        self.skept_frames = 0
+        self.tot_frames_to_skip = int(self.tot_frames) - self.tot_frames_to_int
+        self.skil_avg = 0
+    def perc(self):
+        return self.nb_interpolated_frames / self.tot_frames_to_int * 100
+
+    def time_left(self):
+        remaining_frames = self.tot_frames_to_int - self.nb_interpolated_frames
+        remaining_frames_skip = self.tot_frames_to_skip -  self.skept_frames 
+        str_ = ''
+        tot_sec = remaining_frames*self.loop_timer.avg + remaining_frames_skip*self.skil_avg
+        sec = timedelta(seconds=int(tot_sec))
+        try: 
+            d = datetime(1,1,1) + sec
+            str_ = str("%dd:%dh:%dm:%ds" % (d.day-1, d.hour, d.minute, d.second))
+        except: pass
+        return str_
 
     def add_more(self, image_io_reader, frames_list, PID_list):
         self.R = image_io_reader

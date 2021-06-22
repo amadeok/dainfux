@@ -43,7 +43,7 @@ signals = bytearray(b'\x00\x01\x00')
 part_data = []
 
 def vram_init(dummy_img):
-    X0 = torch.from_numpy(np.transpose(dummy_img, (2,0,1)).astype("float32") / 255.0).type(args.dtype)
+    X0 = torch.from_numpy(np.transpose(dummy_img, (2,0,1)).astype("float32") / 255.0).type(args. dtype)
     X1 = torch.from_numpy(np.transpose(dummy_img, (2,0,1)).astype("float32") / 255.0).type(args.dtype)
     intWidth = X0.size(2)
     intHeight = X0.size(1)
@@ -141,7 +141,8 @@ if bypass == 0 and c.upscale_only == 0:
     time_offsets = [kk * timestep for kk in range(1, int(1.0 / timestep))]
     torch.set_grad_enabled(False)
 
-loop_timer = AverageMeter()
+c.loop_timer = AverageMeter()
+#c.loop_timer_skip = AverageMeter()
 
 
 #########
@@ -171,24 +172,25 @@ if (c.upscale_only == 0):
     vram_init(dummy_img_)
 
 if c.waifu2x_scale != 0:
-    pipe_array(dummy_img_.convert('RGBA'), 'BytesIO',  signals, b'\x00\x67',  None) # pipe a dummy image to get settings
+    pipe_array(dummy_img_, 'BytesIO',  signals, b'\x00\x67',  None) # pipe a dummy image to get settings
 S = None; dummy_img_ = None; dummy_img = None
 
 time.sleep(0.5)
 if c.dual_instance and c.instance_id == 0:
     start_another_instance(c,c.PID_list)
 
-frames = []
 fd2 = 0
 
-R = imageio.read(c.input_file, "ffmpeg")
+c.frames = []
 
-c.add_more(R, frames, None)
+#c.R = imageio.get_reader(c.input_file, format="ffmpeg", input_params=c.decoder_input_param, output_params=c.decoder_output_param)
+
+#c.add_more(R, frames, None)
 
 #draw_index_and_save(frames[0], 'f', save_pngs, (c.downscale_resolution))
 
 def index():
-    return c.R._BaseReaderWriter_last_index
+    return c.R.index
 
 def interpolate_and_pipe(c, F0_mod, F1_mod):
     X0 = torch.from_numpy(np.transpose(F0_mod, (2,0,1)).astype("float32") / 255.0).type(args.dtype)
@@ -201,7 +203,7 @@ def interpolate_and_pipe(c, F0_mod, F1_mod):
     intHeight = X0.size(1)
     channels = X0.size(0)
     if not channels == 3:
-        print(f"{c.log}Skipping frame {index()} -- expected 3 color channels but found {channels}.")
+        print(f"{c.log}Skipping frame {c.R.index} -- expected 3 color channels but found {channels}.")
         return -1
 
     if intWidth != ((intWidth >> 7) << 7):
@@ -268,25 +270,23 @@ def interpolate_and_pipe(c, F0_mod, F1_mod):
         interpolated_frame_number += 1
         item_to_save =  np.round(item).astype(numpy.uint8)
 
-        pilimage = Image.fromarray(item_to_save).convert('RGBA')
-        #d0 = ImageDraw.Draw(pilimage)
-        #d0.text((10,10), f"{index()-1}b", fill=(255,255,0))
-        if save_pngs:
-            pilimage.save(f"{save_pngs}/{index()-1:0>4d}b.png")
+        pilimage = item_to_save #Image.fromarray(item_to_save)
+        # d0 = ImageDraw.Draw(pilimage)
+        # d0.text((10,10), f"{c.R.index-1}b", fill=(255,255,0))
+        # if save_pngs:
+        #     pilimage.save(f"{save_pngs}/{c.R.index-1:0>4d}b.png")
 
         if c.waifu2x_scale != 0:
-            LPB = index().to_bytes(2, 'little') + b'\x62'
+            LPB = c.R.index.to_bytes(2, 'little') + b'\x62'
             pipe_array(pilimage, 'to_bytes',  signals, LPB,  None) #pipe the interpolated frame to waifu
         
         elif c.waifu2x_scale == 0: #we are not upscaling, pipe to ffmpeg directly
             pipe_array(pilimage, 'to_bytes',  b'\x00\x00\x00', b'\x00\x00\x00',  'ffmpeg')#pipe to ffmpeg the interpolated frame
 
-
-
 def process_task(c, which):
         
     c.R = None    
-    c.R = imageio.read(c.input_file, "ffmpeg")
+    c.R = vapoursynth_setup(c)
     c.reset_vals()
     count = 0
 
@@ -308,8 +308,8 @@ def process_task(c, which):
                 if c.selective_interpolation == 1:
                     final_frame -= 1
                 #c.R.set_image_index(start_frame)
-                c.frames.append(frame_obj(c.R.get_next_data(), c.R._BaseReaderWriter_last_index))
-                if start_frame  != index():
+                c.frames.append(frame_obj(c.R.get_next_data(), c.R.index))
+                if start_frame  != c.R.index:
                     print(f"{c.log} warning")
                 if pipe_to_ffmpeg:
                     if c.waifu2x_scale != 0:
@@ -319,24 +319,24 @@ def process_task(c, which):
                         fd2 = open_fifo('ffmpeg_pipe', '', c)
 
 
-                while index() < final_frame:    
-                    in0 = index()
+                while c.R.index < final_frame:    
+                    in0 = c.R.index
                     if c.selective_interpolation == 1:
-                        wtinterpolate = c.wtinterpolate_data[count][index() - start_frame]
+                        wtinterpolate = c.wtinterpolate_data[count][c.R.index - start_frame]
                     elif c.upscale_only == 1: wtinterpolate = 0 
                     else: wtinterpolate = 1 # interpolate all frames
 
                     if bypass == 0:
                          signals[1] = wtinterpolate
                 
-                    if index() == final_frame-1: 
+                    if c.R.index == final_frame-1: 
                         signals[2] = 1 #it's the last frame of the part, signal to waifu
                     else: signals[2] = 0
                         
-                    c.frames.append(frame_obj(c.R.get_next_data(), c.R._BaseReaderWriter_last_index))
-                    in1 = index()
-                    F0 =draw_index_and_save(c.frames[index()-1], 'a', None, None) #frame a #Image.open("00001s.png") #
-                    F1 =Image.fromarray(c.frames[index()].frame) #frame c #Image.open("00001s.png") #
+                    c.frames.append(frame_obj(c.R.get_next_data(), c.R.index))
+                    in1 = c.R.index
+                    F0 =draw_index_and_save(c.frames[c.R.index-1], 'a', None, None) #frame a #Image.open("00001s.png") #
+                    F1 =Image.fromarray(c.frames[c.R.index].frame) #frame c #Image.open("00001s.png") #
 
                     if wtinterpolate == 1 and c.waifu2x_scale != 0:
                         F0_mod = F0.resize(c.downscale_resolution)
@@ -345,18 +345,18 @@ def process_task(c, which):
                         F0_mod = F0
                         F1_mod = F1
                     
-                    #draw_index_and_save(c.frames[index()-1], 'a', save_pngs, (c.downscale_resolution))
+                    #draw_index_and_save(c.frames[c.R.index-1], 'a', save_pngs, (c.downscale_resolution))
                     
-                    if bypass or wtinterpolate == 0:
-                        draw_index_and_save(c.frames[index()-1], 'a', save_pngs, (c.downscale_resolution))
+                    if bypass: #or wtinterpolate == 0
+                        draw_index_and_save(c.frames[c.R.index-1], 'a', save_pngs, (c.downscale_resolution))
 
                     if c.waifu2x_scale != 0:
-                        LPB = index().to_bytes(2, 'little') + b'\x61'
-                        pipe_array(F0.convert('RGBA'), 'to_bytes',  signals, LPB,  None)# pipe the first frame to waifu2x at original resolution
+                        LPB = c.R.index.to_bytes(2, 'little') + b'\x61'
+                        pipe_array(c.frames[c.R.index-1].frame, 'to_bytes',  signals, LPB,  None)# pipe the first frame to waifu2x at original resolution
                     elif c.waifu2x_scale == 0: #we are not upscaling, pipe to ffmpeg directly
-                        pipe_array(F0.convert('RGBA'), 'to_bytes',  b'\x00\x00\x00', b'\x00\x00\x00',  'ffmpeg')#pipe the first frame at original resolution
+                        pipe_array(c.frames[c.R.index-1].frame, 'to_bytes',  b'\x00\x00\x00', b'\x00\x00\x00',  'ffmpeg')#pipe the first frame at original resolution
 
-                    c.frames[index()-1] = None
+                    c.frames[c.R.index-1] = None
 
                     start_time = time.time()
 
@@ -364,11 +364,14 @@ def process_task(c, which):
                         interpolate_and_pipe(c, F0_mod, F1_mod) #interpolate two frames and pipe to waifu2x or ffmpeg
                     elif wtinterpolate == 0:
                         if c.waifu2x_scale == 0: #we are not upscaling, pipe to ffmpeg directly
-                            pipe_array(F0.convert('RGBA'), 'to_bytes',  b'\x00\x00\x00', b'\x00\x00\x00',  'ffmpeg')#pipe dummy frame
+                            pipe_array(F0, 'to_bytes',  b'\x00\x00\x00', b'\x00\x00\x00',  'ffmpeg')#pipe dummy frame
 
                     end_time = time.time()
-                    loop_timer.update(end_time - start_time)
-                    print(f"{c.log}****** Processed frame {index()} of part {count}| Time per frame (avg): {loop_timer.avg:2.2f}s | Time left: ******************" )
+                    if wtinterpolate == 1:
+                        c.nb_interpolated_frames +=1
+                        c.loop_timer.update(end_time - start_time)
+
+                    print(f"{c.log}**** Processed frame {c.R.index:>5d} | part {count:>4} | {c.perc():2.2f}% complete | Time per frame (avg): {c.loop_timer.avg:2.2f}s | Time left: {c.time_left()}*********" )
                 if c.waifu2x_scale == 0:
                     os.close(fd2)
             else:
@@ -378,8 +381,7 @@ def process_task(c, which):
             skip_photosensitive_part(c, count)
 
         else:
-            skip_photosensitive_part(c, count)
-
+            skip_photosensitive_part(c, count, photosen=False)
 
         if c.part_indexes[c.index_counter] == None:
             break

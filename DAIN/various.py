@@ -1,5 +1,5 @@
 import os, sys, io, struct, signal, fcntl, time, select
-import termios, tty, threading
+import termios, tty, threading, cv2
 import imageio, numpy as np
 from PIL import Image, ImageDraw
 import utils
@@ -48,29 +48,26 @@ def check_index(c, count):
         c.index_counter+=1
         return 1
     else: return 0
-
-def skip_photosensitive_part(c, count):
+tim_l = [0 for x in range(1)]
+def skip_photosensitive_part(c, count, photosen = True):
     skip_count = 0
-    if c.selective_interpolation == 0:
-        while c.R._BaseReaderWriter_last_index < c.part_data[count][2]-1:
-            c.frames.append(frame_obj(c.R.get_next_data(), c.R._BaseReaderWriter_last_index))
-            c.frames[c.R._BaseReaderWriter_last_index] = None
-            skip_count+=1
-        # if count == c.part_indexes[c.index_counter-1]:
-        #     offset = 1
-        # else: offset = -1
-    else:# offset = 1
+    t0 = time.time()
+    while c.R.index < c.part_data[count][2]-1:
+        c.frames.append(frame_obj(c.R.get_next_data(), c.R.index))
+        c.frames[c.R.index] = None
+        skip_count+=1
+        
+    c.skept_frames += skip_count
+    if photosen: c.nb_interpolated_frames += skip_count
 
-        while c.R._BaseReaderWriter_last_index < c.part_data[count][2]-1:
-            c.frames.append(frame_obj(c.R.get_next_data(), c.R._BaseReaderWriter_last_index))
-            c.frames[c.R._BaseReaderWriter_last_index] = None
-            skip_count+=1
-        # for x in range(c.part_data[count][4]+1):
-        #     c.frames.append(frame_obj(c.R.get_next_data(), c.R._BaseReaderWriter_last_index))
-        #     c.frames[c.R._BaseReaderWriter_last_index] = None
-        #     skip_count+=1
+    t1 = time.time()
+    d = t1-t0
+    tim_l.append(d/skip_count)
+    #tim_l.pop(0)
+    c.skil_avg = sum(tim_l) / len(tim_l)
+    #c.loop_timer_skip.update(d)
 
-    print(f"{c.log} skept ", skip_count )
+    print(f"{c.log} skept ", skip_count, f'avg: {c.skil_avg:2.4f}' )
 def create_pipes(c):
     global fd0; global fd1
     output_pipe = f"/tmp/dain_a_id{c.instance_id}"
@@ -98,7 +95,11 @@ def terminate():
 
 def pipe_array(image_obj, mode, signals, frame_id, ffmpeg):
     if mode == 'to_bytes':
-        bytearr = image_obj.tobytes()
+        #image_obj = image_obj.convert('YCbCr')
+        bytearr = np.ravel(image_obj) #image_obj.tobytes()
+        #image_obj.save("test0.bmp")
+        #bytearr = cv2.cvtColor(np.array(image_obj), cv2.COLOR_RGB2YUV_I420)
+        #cv2.imwrite('test0.bmp', bytearr)
     elif mode == 'BytesIO':
         output = io.BytesIO()
         image_obj.save(output, format='PNG')
@@ -195,11 +196,11 @@ def draw_index_and_save(frame_obj, a_or_b, save_pngs, resize):
     Dtemp = Image.fromarray(frame_obj.frame)
     if resize:
         Dtemp = Dtemp.resize(resize)
-    #d0 = ImageDraw.Draw(Dtemp)
-    #d0.text((10,10), f"{frame_obj.index}{a_or_b}", fill=(255,255,0))
+    # d0 = ImageDraw.Draw(Dtemp)
+    # d0.text((10,10), f"{frame_obj.index}{a_or_b}", fill=(255,255,0))
 
-    if save_pngs:
-        Dtemp.save(f"{save_pngs}/{frame_obj.index:0>4d}{a_or_b}.png")
+    # if save_pngs:
+    #     Dtemp.save(f"{save_pngs}/{frame_obj.index:0>4d}{a_or_b}.png")
     return Dtemp
 
 def ret_pipe_desc():
@@ -252,13 +253,19 @@ def compare_lists(list_a, list_b, start, end, ph_thres, full_list):
     return difference_found
 
 def find_wti_offset(c):
+    prev_file = c.process_dir + "/" + "temp2" + "/wti_offset.txt"
+    if os.path.isfile(prev_file) == True:
+        with open(prev_file, 'r') as inp:
+            offset = int(inp.read())
+            print(f"{c.log} using previously found offset: {offset}")
+            return offset
     import cv2
     import imageio
     from itertools import chain
     from utils import start_ffmpeg_wti
-    R = imageio.read(c.input_file, "ffmpeg")
+    R = utils.vapoursynth_setup(c)
     def ind():
-        return R._BaseReaderWriter_last_index
+        return R.index
     counter = 0
     print(f"{c.log} Finding offset...")
     frames = []
@@ -278,15 +285,15 @@ def find_wti_offset(c):
     wti_countinuous = list(chain.from_iterable(no_skip_data))
     execute = start_ffmpeg_wti(c)
 
-   # frames.append(frame_obj(R.get_next_data(), R._BaseReaderWriter_last_index))
+   # frames.append(frame_obj(R.get_next_data(), R.index))
     fd2 = open_fifo('ffmpeg_pipe', '', c)
 
     for y in range(1000):
 
-        frames.append(frame_obj(R.get_next_data(), R._BaseReaderWriter_last_index))
+        frames.append(frame_obj(R.get_next_data(), R.index))
         #F0 =  draw_index_and_save(frames[ind()], 'aT', None, None) 
         F0 = Image.fromarray(frames[ind()].frame)
-        pipe_array(F0.convert('RGBX'), 'to_bytes',  b'\x00\x00\x00', b'\x00\x00\x00',  'ffmpeg')
+        pipe_array(F0, 'to_bytes',  b'\x00\x00\x00', b'\x00\x00\x00',  'ffmpeg')
 
     os.close(fd2)
     out, error_msg = execute.communicate()
@@ -327,6 +334,7 @@ def find_wti_offset(c):
 
     if not offset:
         print("Unable to find wti offset")
+
         sys.exit()
-    
+    with open(c.process_dir + "/" + "temp2" + "/wti_offset.txt", 'w+') as out: out.write(str(offset))
     return offset
