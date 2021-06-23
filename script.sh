@@ -66,6 +66,9 @@ cp -a ../Dainfux/DAIN/. .
 chmod 755 "/content/dainfux/Dainfux/waifu2x-ncnn-vulkan-20210210/build/ubuntu18.04/waifu2x-ncnn-vulkan"
 chmod 755 "/content/dainfux/Dainfux/ffmpeg-4.3.2/ubuntu18.04/ffmpeg"
 
+cd /content/
+npm install ffmpeg-static
+cp /content/node_modules/ffmpeg-static/ffmpeg /usr/bin/
 
 
 
