@@ -563,7 +563,7 @@ class context:
 
         self.output_dir = args.output_dir
         self.process_dir = self.output_dir + '/' + self.filename_no_ext
-        if os.path.isfile(f"{self.process_dir}/FINISHED.txt") == True:
+        if os.path.isfile(f"{self.process_dir}/FINISHED.txt") == True and args.count_ph == 0:
             print("Processing for this file has already been done, exiting")
             sys.exit()
         self.mode = args.mode

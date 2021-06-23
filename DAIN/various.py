@@ -58,7 +58,11 @@ def skip_photosensitive_part(c, count, photosen = True):
         skip_count+=1
         
     c.skept_frames += skip_count
-    if photosen: c.nb_interpolated_frames += skip_count
+   # if c.instance_id == 1:
+     #   pass
+    if photosen:
+        c.nb_interpolated_frames += c.part_data[count][5]
+        #print(f" ||||||||||||||||||||||||   {c.log} added {c.part_data[count][5]}, poart {count}")
 
     t1 = time.time()
     d = t1-t0

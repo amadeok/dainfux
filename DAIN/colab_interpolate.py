@@ -378,7 +378,7 @@ def process_task(c, which):
                 skip_photosensitive_part(c, count)
         elif c.part_data[count][3] == 1: #and c.selective_interpolation:
 
-            skip_photosensitive_part(c, count)
+            skip_photosensitive_part(c, count, photosen=False)
 
         else:
             skip_photosensitive_part(c, count, photosen=False)
