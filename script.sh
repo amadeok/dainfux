@@ -1,5 +1,6 @@
 #!/bin/bash
 
+mkdir /content/dainfux/vapoursynth
 unzip -q /content/dainfux/Dainfux/vapoursynth/18.04/vapoursynth.zip -d /content/dainfux/vapoursynth/vapoursynth
 unzip -q /content/dainfux/Dainfux/vapoursynth/18.04/ffms2.zip -d /content/dainfux/vapoursynth/ffms2
 unzip -q /content/dainfux/Dainfux/vapoursynth/18.04/zimg.zip -d /content/dainfux/vapoursynth/zimg
