@@ -1,5 +1,17 @@
 #!/bin/bash
 
+unzip -q /content/dainfux/Dainfux/vapoursynth/18.04/vapoursynth.zip -d /content/dainfux/vapoursynth/vapoursynth
+unzip -q /content/dainfux/Dainfux/vapoursynth/18.04/ffms2.zip -d /content/dainfux/vapoursynth/ffms2
+unzip -q /content/dainfux/Dainfux/vapoursynth/18.04/zimg.zip -d /content/dainfux/vapoursynth/zimg
+
+cd /content/dainfux/vapoursynth/ffms2/ffms2/
+sudo make install
+cd /content/dainfux/vapoursynth/zimg/zimg/
+sudo make install
+cd /content/dainfux/vapoursynth/vapoursynth/vapoursynth/
+sudo make install
+
+pip install vapoursynth
 pip install torch==1.4.0+cu100 torchvision==0.5.0+cu100 -f https://download.pytorch.org/whl/torch_stable.html
 pip install scipy==1.1.0
 pip install ffmpeg-python
@@ -53,17 +65,7 @@ cp -a ../Dainfux/DAIN/. .
 chmod 755 "/content/dainfux/Dainfux/waifu2x-ncnn-vulkan-20210210/build/ubuntu18.04/waifu2x-ncnn-vulkan"
 chmod 755 "/content/dainfux/Dainfux/ffmpeg-4.3.2/ubuntu18.04/ffmpeg"
 
-unzip -q /content/dainfux/Dainfux/vapoursynth/18.04/vapoursynth.zip -d /content/dainfux/vapoursynth/vapoursynth
-unzip -q /content/dainfux/Dainfux/vapoursynth/18.04/ffms2.zip -d /content/dainfux/vapoursynth/ffms2
-unzip -q /content/dainfux/Dainfux/vapoursynth/18.04/zimg.zip -d /content/dainfux/vapoursynth/zimg
 
-cd /content/dainfux/vapoursynth/ffms2/ffms2/
-sudo make install
-cd /content/dainfux/vapoursynth/zimg/zimg/
-sudo make install
-cd /content/dainfux/vapoursynth/vapoursynth/vapoursynth/
-sudo make install
-pip install vapoursynth
 
 
 
