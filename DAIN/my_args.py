@@ -121,6 +121,7 @@ parser.add_argument('--ending_skip', type = str, default = '0:0-0:0', help='spec
 parser.add_argument('--wti_offset', type = int, default = 0, help='wti offset')
 parser.add_argument('--waifu2x_verbose', type = int, default = 0, help='waifu2x_verbose')
 parser.add_argument('--use_ffmpeg_dec', type = int, default = 0, help='use ffmpeg decoder')
+parser.add_argument('--smart_fill', type = int, default = 0, help='replace consecutive equal frames with  interpolated frames')
 
 args = parser.parse_args()
 

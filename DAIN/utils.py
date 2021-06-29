@@ -47,6 +47,8 @@ def time_step_calculation(ctx, input_file):
     INPUT_FILEPATH = input_file
     cap = cv2.VideoCapture(INPUT_FILEPATH)
     first_fps = cap.get(cv2.CAP_PROP_FPS)
+    if first_fps == 0:
+        return -1
     time_step = ctx.input_fps/first_fps
     return time_step
 
@@ -148,7 +150,7 @@ def check_file(c, count, output_file):
     output_lenght = get_length(output_file)
     if math.isclose(correct_lenght, output_lenght, rel_tol=0.003) == False:
         print(
-            f"Part {count} has wrong lenght, correct is {correct_lenght}")
+            f"Part {count} has wrong lenght {output_lenght}, correct is {correct_lenght}")
         return False
     else: return True
 
@@ -520,8 +522,10 @@ def check_fps(ctx):
     first = ctx.process_dir + '/' + '0000.mp4'
     if os.path.isfile(first):
         prev = ctx.time_step
-        ctx.time_step = time_step_calculation(ctx, first)
-        print(f"{ctx.log} found existing file 0000.mp4 with time step {ctx.time_step}, overwriting user settings: {prev}")
+        ret =  time_step_calculation(ctx, first)
+        if ret != -1:
+            ctx.time_step = ret
+            print(f"{ctx.log} found existing file 0000.mp4 with time step {ctx.time_step}, overwriting user settings: {prev}")
 
 def vapoursynth_setup(c):
     class vs_reader:
@@ -552,7 +556,25 @@ def vapoursynth_setup(c):
     
     return vs_reader(c)
 
-
+def smart_fill_apply(ctx):
+    # with open('wtori.txt', 'w+') as out:
+    #     for x in range(len(ctx.wtinterpolate_data)):
+    #         out.write(str(ctx.wtinterpolate_data[x]) + '\n')
+    val = -1
+    for x in range(len(ctx.wtinterpolate_data)):
+        for y in range(1, len(ctx.wtinterpolate_data[x])):
+            if ctx.wtinterpolate_data[x][y] == 1 and ctx.wtinterpolate_data[x][y-1] == 0:
+                ctx.wtinterpolate_data[x][y] += 1
+                ctx.wtinterpolate_data[x][y-1] = val#-= 1
+            if args.smart_fill:
+                if ctx.wtinterpolate_data[x][y] == 2 and ctx.wtinterpolate_data[x][y-1] == val and ctx.wtinterpolate_data[x][y-2] == 0 and ctx.wtinterpolate_data[x][y-3] >= 1:
+                    ctx.wtinterpolate_data[x][y] += 1
+                    ctx.wtinterpolate_data[x][y-2] = val#-= 1
+    
+    # with open('wtmod.txt', 'w+') as out:
+    #     for x in range(len(ctx.wtinterpolate_data)):
+    #         out.write(str(ctx.wtinterpolate_data[x]) + '\n')
+    
 class context:        
 
     def __init__(self, args):
@@ -638,7 +660,8 @@ class context:
             self.part_data = generate_part_data(self)
             self.wtinterpolate_data = None
         self.nb_parts_tot = len(self.part_data)
-
+        if args.smart_fill:
+            smart_fill_apply(self)
 
         self.imgs_per_frame = int((self.target_fps * 1001 / 1000) / (self.input_fps * 1001 / 1000))
         self.intermediate_frames = self.imgs_per_frame - 1

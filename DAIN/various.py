@@ -200,8 +200,8 @@ def draw_index_and_save(frame_obj, a_or_b, save_pngs, resize):
     Dtemp = Image.fromarray(frame_obj.frame)
     if resize:
         Dtemp = Dtemp.resize(resize)
-    # d0 = ImageDraw.Draw(Dtemp)
-    # d0.text((10,10), f"{frame_obj.index}{a_or_b}", fill=(255,255,0))
+    d0 = ImageDraw.Draw(Dtemp)
+    d0.text((10,10), f"{frame_obj.index}{a_or_b}", fill=(255,255,0))
 
     # if save_pngs:
     #     Dtemp.save(f"{save_pngs}/{frame_obj.index:0>4d}{a_or_b}.png")
@@ -215,12 +215,13 @@ def send_sigterm(c, PID_list):
     os.kill(PID_list[0].pid, signal.SIGTERM)
 
 def finish(c, PID_list):
-    print(f"{c.log} Opening end pipe")
-    end_fifo = 'end_pipe'
-    if os.path.exists(end_fifo) == False:  os.mkfifo(end_fifo)
-    if c.instance_id == 0:  fd= os.open(end_fifo, os.O_WRONLY)
-    else: fd= os.open(end_fifo, os.O_RDONLY)
-    print(f"{c.log} End pipe opened, exiting")
+    if c.dual_instance != 0:
+        print(f"{c.log} Opening end pipe")
+        end_fifo = 'end_pipe'
+        if os.path.exists(end_fifo) == False:  os.mkfifo(end_fifo)
+        if c.instance_id == 0:  fd= os.open(end_fifo, os.O_WRONLY)
+        else: fd= os.open(end_fifo, os.O_RDONLY)
+        print(f"{c.log} End pipe opened, exiting")
     with open(f"{c.process_dir}/FINISHED.txt", "w+") as out: pass
     #os.close(fd)
     send_sigterm(c, PID_list)

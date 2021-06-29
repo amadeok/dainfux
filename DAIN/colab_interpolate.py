@@ -17,7 +17,6 @@ import warnings
 warnings.filterwarnings("ignore")
 from transcode import transcode_v2
 
-
 if args.upscale_only == 0 and args.count_ph == 0:
     import torch
     import networks
@@ -270,9 +269,11 @@ def interpolate_and_pipe(c, F0_mod, F1_mod):
         interpolated_frame_number += 1
         item_to_save =  np.round(item).astype(numpy.uint8)
 
-        pilimage = item_to_save #Image.fromarray(item_to_save)
+        pilimage = item_to_save #
+        # pilimage = Image.fromarray(item_to_save)
         # d0 = ImageDraw.Draw(pilimage)
         # d0.text((10,10), f"{c.R.index-1}b", fill=(255,255,0))
+        # pilimage = pilimage.tobytes()
         # if save_pngs:
         #     pilimage.save(f"{save_pngs}/{c.R.index-1:0>4d}b.png")
 
@@ -327,7 +328,11 @@ def process_task(c, which):
                     else: wtinterpolate = 1 # interpolate all frames
 
                     if bypass == 0:
-                         signals[1] = wtinterpolate
+                        wtinterpolate_byte = wtinterpolate
+                        if wtinterpolate < 0: 
+                            wtinterpolate_byte +=256
+                        else: wtinterpolate_byte = wtinterpolate
+                        signals[1] = wtinterpolate_byte
                 
                     if c.R.index == final_frame-1: 
                         signals[2] = 1 #it's the last frame of the part, signal to waifu
@@ -338,7 +343,7 @@ def process_task(c, which):
                     F0 =draw_index_and_save(c.frames[c.R.index-1], 'a', None, None) #frame a #Image.open("00001s.png") #
                     F1 =Image.fromarray(c.frames[c.R.index].frame) #frame c #Image.open("00001s.png") #
 
-                    if wtinterpolate == 1 and c.waifu2x_scale != 0:
+                    if wtinterpolate >= 1 and c.waifu2x_scale != 0:
                         F0_mod = F0.resize(c.downscale_resolution)
                         F1_mod = F1.resize(c.downscale_resolution)
                     else:
@@ -350,7 +355,7 @@ def process_task(c, which):
                     if bypass: #or wtinterpolate == 0
                         draw_index_and_save(c.frames[c.R.index-1], 'a', save_pngs, (c.downscale_resolution))
 
-                    if c.waifu2x_scale != 0:
+                    if c.waifu2x_scale != 0 and wtinterpolate != -1:
                         LPB = c.R.index.to_bytes(2, 'little') + b'\x61'
                         pipe_array(c.frames[c.R.index-1].frame, 'to_bytes',  signals, LPB,  None)# pipe the first frame to waifu2x at original resolution
                     elif c.waifu2x_scale == 0: #we are not upscaling, pipe to ffmpeg directly
@@ -360,14 +365,14 @@ def process_task(c, which):
 
                     start_time = time.time()
 
-                    if bypass == 0 and wtinterpolate == 1 and c.upscale_only == 0: 
+                    if bypass == 0 and wtinterpolate >= 1 and c.upscale_only == 0: 
                         interpolate_and_pipe(c, F0_mod, F1_mod) #interpolate two frames and pipe to waifu2x or ffmpeg
                     elif wtinterpolate == 0:
                         if c.waifu2x_scale == 0: #we are not upscaling, pipe to ffmpeg directly
                             pipe_array(F0, 'to_bytes',  b'\x00\x00\x00', b'\x00\x00\x00',  'ffmpeg')#pipe dummy frame
 
                     end_time = time.time()
-                    if wtinterpolate == 1:
+                    if wtinterpolate >= 1:
                         c.nb_interpolated_frames +=1
                         c.loop_timer.update(end_time - start_time)
 
