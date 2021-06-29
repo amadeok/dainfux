@@ -626,7 +626,7 @@ class context:
         else: self.target_fps = self.input_fps
 
         self.joined_file =  f'{self.output_dir}joined_{os.path.splitext(self.filename)[0]}.mp4'
-        self.final_file = f'{self.output_dir}{os.path.splitext(self.filename)[0]}_{round(float(self.target_fps))}fps.mp4'
+        self.final_file = f'{self.output_dir}{os.path.splitext(self.filename)[0]}_{round(float(self.target_fps))}fps_f{args.smart_fill}.mp4'
 
         self.input_resolution_s =  f"{self.input_resolution[0]}x{self.input_resolution[1]}"
         if self.upscale_only == 1:
