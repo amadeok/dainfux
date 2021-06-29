@@ -3,14 +3,14 @@ import os, sys, distro, time
 import psutil
 import GPUtil
 import subprocess as sp
-import ffmpeg, math, cv2
+import ffmpeg, math, cv2, imageio
 import numpy as np
 from PIL import Image
 import various  
 import vapoursynth as vs
 from vapoursynth import core
 from datetime import datetime, timedelta
-
+from my_args import args
 core.std.LoadPlugin(path='/usr/local/lib/libffms2.so') 
 
 t_counter = 0;t0 = 0
@@ -43,21 +43,11 @@ def read_data(c, file_name, no_skip=None):
 
     return data
 
-def time_step_calculation():
-    INPUT_FILEPATH = f"/content/gdrive/My Drive/{input_file}"
-    TARGET_FPS = target_fps
-    import os
-    filename = os.path.basename(INPUT_FILEPATH)
-
-    import cv2
+def time_step_calculation(ctx, input_file):
+    INPUT_FILEPATH = input_file
     cap = cv2.VideoCapture(INPUT_FILEPATH)
-
-    fps = cap.get(cv2.CAP_PROP_FPS)
-    time_step = fps/TARGET_FPS
-
-    if(fps/TARGET_FPS>0.5):
-        print("Define a higher fps, because there is not enough time for new frames. (Old FPS)/(New FPS) should be lower than 0.5. Interpolation will fail if you try.")
-        print(f"{fps}, {TARGET_FPS}, {fps/TARGET_FPS}")
+    first_fps = cap.get(cv2.CAP_PROP_FPS)
+    time_step = ctx.input_fps/first_fps
     return time_step
 
 def get_file_info(input_file):
@@ -332,6 +322,7 @@ def get_tot_frames(input_file):
 
 def find_ffmpeg_bin(self):
     dist = distro.linux_distribution()
+    print(os.getcwd())
     ffmpeg_bin = "../ffmpeg-4.3.2/ffmpeg"
     if os.path.isfile(ffmpeg_bin)  == False:
         ffmpeg_bin = f"../Dainfux/ffmpeg-4.3.2/ubuntu{dist[1]}/ffmpeg"
@@ -525,24 +516,38 @@ def define_color_attr(c):
     c.decoder_output_param = ["-vf", f"colorspace=primaries={c.color_primaries}:trc={c.color_transfer}:space={c.color_space}:range={c.color_range}" ]
     return c.decoder_input_param, c.decoder_output_param
 
+def check_fps(ctx):
+    first = ctx.process_dir + '/' + '0000.mp4'
+    if os.path.isfile(first):
+        prev = ctx.time_step
+        ctx.time_step = time_step_calculation(ctx, first)
+        print(f"{ctx.log} found existing file 0000.mp4 with time step {ctx.time_step}, overwriting user settings: {prev}")
+
 def vapoursynth_setup(c):
     class vs_reader:
         def __init__(self, c):
             self.index = -1
-            self.video = core.ffms2.Source(source=c.input_file)
-            first = self.video.get_frame(0)
-            self.vs_metadata = first.props
-            first = None
-            self.video = core.resize.Bicubic(clip=self.video, format=vs.RGB24, matrix_in_s=c.color_space, transfer_in_s=c.color_transfer , primaries_in_s=c.color_primaries ,range_in_s=c.color_range)
-            self.generator = self.video.frames()
+            if args.use_ffmpeg_dec == 0:
+                self.video = core.ffms2.Source(source=c.input_file)
+                first = self.video.get_frame(0)
+                self.vs_metadata = first.props
+                first = None
+                self.video = core.resize.Bicubic(clip=self.video, format=vs.RGB24, matrix_in_s=c.color_space, transfer_in_s=c.color_transfer , primaries_in_s=c.color_primaries ,range_in_s=c.color_range)
+                self.generator = self.video.frames()
+            else:
+                self.reader = imageio.read(c.input_file, "ffmpeg")
         def get_next_data(self):
             self.index +=1
-            frame = next(self.generator)
-            r = np.array(frame.get_read_array(0))
-            g = np.array(frame.get_read_array(1))
-            b = np.array(frame.get_read_array(2))
-            #rgb = np.dstack((r,g,b)) 
-            return cv2.merge((r, g, b)) 
+            if args.use_ffmpeg_dec == 0:
+                frame = next(self.generator)
+                r = np.array(frame.get_read_array(0))
+                g = np.array(frame.get_read_array(1))
+                b = np.array(frame.get_read_array(2))
+                #rgb = np.dstack((r,g,b)) 
+                return cv2.merge((r, g, b)) 
+            else: 
+                return self.reader.get_next_data()
+
 
     
     return vs_reader(c)
@@ -591,6 +596,9 @@ class context:
         self.file_info = get_file_info(self.input_file)
         self.input_resolution = [int(self.file_info[0]), int(self.file_info[1])]
         self.input_fps = self.file_info[2]
+        
+        check_fps(self)
+
         if self.upscale_only == 0:
             self.target_fps = self.input_fps / self.time_step
         else: self.target_fps = self.input_fps

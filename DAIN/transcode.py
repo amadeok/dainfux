@@ -3,14 +3,15 @@ import PIL, imageio
 from various import * #create_pipes, open_fifo, pipe_array, check_key_presses, draw_index_and_save, ret_pipe_desc, transcode
 from utils import *
 import argparse
-args = None
+from my_args import args
+args_ = None
 
 class frame_obj:
     def __init__(self, frame, index):
         self.frame  = frame
         self.index = index
 
-def get_args():
+def get_args_():
     parser = argparse.ArgumentParser(description='transcode')
 
     parser.add_argument('--time_step',  type=float, default=0.5, help='choose the time steps')
@@ -24,8 +25,10 @@ def get_args():
 
     parser.add_argument('--overwrite', type = int, default = 0, help='overwrite')
 
-    args = parser.parse_args()
-    return args 
+    args_ = parser.parse_args_()
+    return args_ 
+
+
 def write_list(frames):
     with open(f"{os.getcwd()}/fraemes", 'w+') as out:    
         for (i, item) in enumerate(frames, start=1):
@@ -40,6 +43,7 @@ def transcode_v2(c):
     # else:
     #     R = imageio.get_reader(c.input_file, format="ffmpeg")
     R = vapoursynth_setup(c)
+    check_fps(c)
 
     count = 0
     need_to_retranscode = 0
@@ -95,7 +99,7 @@ def transcode_v2(c):
         count +=1
     
 
-args = str(sys.argv)
+args_ = str(sys.argv)
 alone = 0
 
 if "--alone" in sys.argv:
@@ -103,9 +107,9 @@ if "--alone" in sys.argv:
     alone = 1
 
 if alone:
-    args = get_args()
-    part_data = read_data(args.parts_data_dir, 'parts')
-    c = context(args, part_data, None)
+    args_ = get_args_()
+    part_data = read_data(args_.parts_data_dir, 'parts')
+    c = context(args_, part_data, None)
 
     transcode_v2(c)
 
