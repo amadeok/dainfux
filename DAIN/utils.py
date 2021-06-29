@@ -566,7 +566,7 @@ def smart_fill_apply(ctx):
             if ctx.wtinterpolate_data[x][y] == 1 and ctx.wtinterpolate_data[x][y-1] == 0:
                 ctx.wtinterpolate_data[x][y] += 1
                 ctx.wtinterpolate_data[x][y-1] = val#-= 1
-            if args.smart_fill:
+            if args.smart_fill >= 2:
                 if ctx.wtinterpolate_data[x][y] == 2 and ctx.wtinterpolate_data[x][y-1] == val and ctx.wtinterpolate_data[x][y-2] == 0 and ctx.wtinterpolate_data[x][y-3] >= 1:
                     ctx.wtinterpolate_data[x][y] += 1
                     ctx.wtinterpolate_data[x][y-2] = val#-= 1
@@ -574,7 +574,7 @@ def smart_fill_apply(ctx):
     # with open('wtmod.txt', 'w+') as out:
     #     for x in range(len(ctx.wtinterpolate_data)):
     #         out.write(str(ctx.wtinterpolate_data[x]) + '\n')
-    
+
 class context:        
 
     def __init__(self, args):
@@ -702,6 +702,7 @@ class context:
         self.skept_frames = 0
         self.tot_frames_to_skip = int(self.tot_frames) - self.tot_frames_to_int
         self.skil_avg = 0
+
     def perc(self):
         return self.nb_interpolated_frames / self.tot_frames_to_int * 100
 

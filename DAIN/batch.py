@@ -5,7 +5,7 @@ if len(sys.argv) > 1:
 else: transcode = 0
 
 def read_file():
-    global file_list; global file_name; global intro_skip_ori; global ending_skip_ori; global time_step_ori; global pad; global out_dir_
+    global file_list; global file_name; global intro_skip_ori; global ending_skip_ori; global time_step_ori; global pad; global out_dir_; global smart_fill
 
     with open("list.txt", "r") as inp:
         file_list = inp.read().split("\n")
@@ -28,8 +28,9 @@ def read_file():
     intro_skip_ori = file_list[2].split(" ")[1]
     ending_skip_ori = file_list[3].split(" ")[1]
     time_step_ori = file_list[4].split(" ")[1]
+    smart_fill = file_list[5].split(" ")[1]
 
-    for y in range(5):
+    for y in range(6):
         file_list.pop(0)
     return file_list
 
@@ -61,7 +62,7 @@ for x in range(len(file_list)):
 
     print("||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||")
     print("||| current file:", curr_file, "|||",  "intro_skip: ", intro_skip, "intro_skip: ",  ending_skip, "|||", "time_step:", time_step)
-    full_cmd = f"python -W ignore colab_interpolate.py     --netName DAIN_slowmotion --time_step {time_step} --input_file '/content/drive/MyDrive/{curr_file}' --output_dir /content/drive/MyDrive/DAIN --enable_transcoder 0 --overwrite 0 --upscale_only 0  --selective_interpolation 1 --dual_instance 1   --waifu2x_scale 2 --waifu2x_model ../waifu2x-ncnn-vulkan/models/models-upconv_7_anime_style_art_rgb --ph_this_bad_th 500 --use_debug_parts 0 --debug_nb_parts 0 --intro_skip {intro_skip} --ending_skip {ending_skip}"
+    full_cmd = f"python -W ignore colab_interpolate.py     --netName DAIN_slowmotion --time_step {time_step} --input_file '/content/drive/MyDrive/{curr_file}' --output_dir /content/drive/MyDrive/DAIN --enable_transcoder 0 --overwrite 0 --upscale_only 0  --selective_interpolation 1 --dual_instance 1   --waifu2x_scale 2 --waifu2x_model ../waifu2x-ncnn-vulkan/models/models-upconv_7_anime_style_art_rgb --ph_this_bad_th 500 --use_debug_parts 0 --debug_nb_parts 0 --intro_skip {intro_skip} --ending_skip {ending_skip} --smart_fill {smart_fill}"
 
     if transcode == 0:
         cmd = full_cmd
