@@ -56,6 +56,7 @@ char save_frame_id[3] = {0, 0, 0};
 unsigned char *filedata2;
 uint32_t initial_image_size[1];
 static char log0[50];
+int rgb_mult = 3;
 int max_pipe_size(int pipe_desc)
 {
     long pipe_size = (long)fcntl(pipe_desc, F_GETPIPE_SZ);
@@ -146,7 +147,7 @@ void write_pipe(void *data, int width, int height, int nb, char *inter)
     int ret2 = 0;
     //  printf("writing frame to pipe id %d%s\n", nb, inter);
 
-    int size_write = (width) * (height)*4;
+    int size_write = (width) * (height)*rgb_mult;
 
     //write(fd1, "1", 1);
 
@@ -435,7 +436,7 @@ void *load(void *args)
                     // free(filedata);
                 }
             }
-            int rgba_data_size = w * scale * h * scale * 4;
+            int rgba_data_size = w * scale * h * scale * rgb_mult;
             first_frame_data = (unsigned char *)malloc(rgba_data_size);
             interpolated_data = (unsigned char *)malloc(rgba_data_size);
 
@@ -463,7 +464,15 @@ void *load(void *args)
                             break;
                         if (debug_verbose == 1)
                             printf("%s Piping A frame\n", log0);
+
                         write_pipe(first_frame_data, w * scale, h * scale, lp_load, "a");
+
+                        for (int b = 0; b < signals[1] - 1; b++) //if (signals[1] == 2)
+                        {
+                            write_pipe(first_frame_data, w * scale, h * scale, lp_load, "a");
+                            if (debug_verbose == 1)
+                                printf("%s Piping interpolated frame %d for smart fill \n", log0, b);
+                        }
                         lp_load++;
                         if (signals[1] == 0)
                         {
@@ -681,6 +690,14 @@ void *save(void *args)
                 printf("%s Piping upscaled frame %d\n", log0, frame_counter);
 
             write_pipe(v.outimage.data, v.outimage.w, v.outimage.h, lp_save, "b");
+
+            for (int b = 0; b < signals[1] - 1; b++) //if (signals[1] == 2)
+            {                                        // smart fill is on for this frame, repeat each frame
+                write_pipe(v.outimage.data, v.outimage.w, v.outimage.h, lp_save, "b");
+                if (debug_verbose == 1)
+                    printf("%s Piping interpolated upscaled frame for smart fill %d\n", log0, b);
+            }
+
             frame_counter++;
 
             if (last_frame_of_part == 1 && frame_counter == interpolation_frames_nb || last_frame_of_part && upscale_only == 1)
@@ -839,11 +856,13 @@ int main(int argc, char **argv)
     {
         printf("%s Piping from Python\n", log0);
     }
+
     else if (inputpath.empty() || outputpath.empty())
     {
         print_usage();
         return -1;
     }
+
     if (noise < -1 || noise > 3)
     {
         fprintf(stderr, "invalid noise argument\n");
@@ -926,7 +945,7 @@ int main(int argc, char **argv)
         return -1;
     }
     start_pipes();
-
+    printf("%s rgb_mult: %d\n", log0, rgb_mult);
     receive_signals();
     int ret2 = read(fd0, initial_image_size, 4 * sizeof(unsigned char));
     write(fd1, "1", 1);
