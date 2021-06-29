@@ -566,10 +566,10 @@ def smart_fill_apply(ctx):
             if ctx.wtinterpolate_data[x][y] == 1 and ctx.wtinterpolate_data[x][y-1] == 0:
                 ctx.wtinterpolate_data[x][y] += 1
                 ctx.wtinterpolate_data[x][y-1] = val#-= 1
-            if args.smart_fill >= 2:
-                if ctx.wtinterpolate_data[x][y] == 2 and ctx.wtinterpolate_data[x][y-1] == val and ctx.wtinterpolate_data[x][y-2] == 0 and ctx.wtinterpolate_data[x][y-3] >= 1:
-                    ctx.wtinterpolate_data[x][y] += 1
-                    ctx.wtinterpolate_data[x][y-2] = val#-= 1
+            #if args.smart_fill >= 2:
+            if ctx.wtinterpolate_data[x][y] == 2 and ctx.wtinterpolate_data[x][y-1] == val and ctx.wtinterpolate_data[x][y-2] == 0 and ctx.wtinterpolate_data[x][y-3] >= 1:
+                ctx.wtinterpolate_data[x][y] += 1
+                ctx.wtinterpolate_data[x][y-2] = val#-= 1
     
     # with open('wtmod.txt', 'w+') as out:
     #     for x in range(len(ctx.wtinterpolate_data)):
