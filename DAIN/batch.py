@@ -1,4 +1,7 @@
 import os, sys, subprocess as sp
+f1="/run/user/1000/gvfs/smb-share:server=192.168.1.186,share=media/black-clover/[SubsPlease] Black Clover (01-170) (720p) [Batch]/[SubsPlease] Black Clover - 101 (720p).mkv"
+f="/run/user/1000/gvfs/smb-share:server=192.168.1.186,share=media/black-clover/[SubsPlease] Black Clover (01-170) (720p) [Batch]/[SubsPlease] Black Clover - 100 (720p).mkv"
+print(os.path.isfile(f1))
 
 if len(sys.argv) > 1:
     transcode = int(sys.argv[1])
@@ -61,6 +64,8 @@ for x in range(len(file_list)):
     curr_file = f"{file_name[0]}{number}{file_name[1]}"
 
     print("||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||")
+    if os.path.isfile(curr_file) == False:
+        print("Missing file")
     print("||| current file:", curr_file, "|||",  "intro_skip: ", intro_skip, "intro_skip: ",  ending_skip, "|||", "time_step:", time_step)
     full_cmd = f"python -W ignore colab_interpolate.py     --netName DAIN_slowmotion --time_step {time_step} --input_file '/content/drive/MyDrive/{curr_file}' --output_dir /content/drive/MyDrive/DAIN --enable_transcoder 0 --overwrite 0 --upscale_only 0  --selective_interpolation 1 --dual_instance 1   --waifu2x_scale 2 --waifu2x_model ../waifu2x-ncnn-vulkan/models/models-upconv_7_anime_style_art_rgb --ph_this_bad_th 500 --use_debug_parts 0 --debug_nb_parts 0 --intro_skip {intro_skip} --ending_skip {ending_skip} --smart_fill {smart_fill}"
 

@@ -200,8 +200,8 @@ def draw_index_and_save(frame_obj, a_or_b, save_pngs, resize):
     Dtemp = Image.fromarray(frame_obj.frame)
     if resize:
         Dtemp = Dtemp.resize(resize)
-    d0 = ImageDraw.Draw(Dtemp)
-    d0.text((10,10), f"{frame_obj.index}{a_or_b}", fill=(255,255,0))
+    #d0 = ImageDraw.Draw(Dtemp)
+    #d0.text((10,10), f"{frame_obj.index}{a_or_b}", fill=(255,255,0))
 
     # if save_pngs:
     #     Dtemp.save(f"{save_pngs}/{frame_obj.index:0>4d}{a_or_b}.png")
@@ -248,11 +248,11 @@ def compare_lists(list_a, list_b, start, end, ph_thres, full_list):
     difference_found = 0
     for x in range(end-start):
         A = list_a[x+start][1]; B = list_b[x+start]
-        #print (f" {A} {B}")
+   #     print (f" {A} {B}")
         if A != B:
-            #print(f"lists different x:{x}; {A}, {B}")
+          #  print(f"lists different x:{x}; {A}, {B}")
             if not math.isclose(list_a[x+start][2], ph_thres, abs_tol = 25):    
-                #print(f"[2]: {list_a[x+start][2]}")
+           #     print(f"[2]: {list_a[x+start][2]}")
                 difference_found += 1
             #return 1
     return difference_found
@@ -322,7 +322,9 @@ def find_wti_offset(c):
     wti_countinuous_pop = wti_countinuous[:]
     for y in range(10): 
         dif = compare_lists(compare, wti_countinuous_ins, 50, 999, c.ph_this_bad_th, strings)
-        if dif < 5:
+        #print("y: ", y, " dif: ", dif)
+        if dif < 10:
+            if dif >= 5: print("Warning while finding offset dif was greater than 5")
             print ("Found wti offset by inserting 1 into  wti_continuous")
             offset = y
             break
@@ -331,7 +333,9 @@ def find_wti_offset(c):
     if dif > 5 and not offset:
         for y in range(10): 
             dif = compare_lists(compare, wti_countinuous_pop, 50, 990, c.ph_this_bad_th, strings)
-            if dif < 5:
+            #print("y: ", y, " dif: ", dif)
+            if dif < 10:
+                if dif >= 5: print("Warning while finding offset dif was greater than 5")
                 print ("Found wti offset by popping 1 from wti_continuous")
                 offset = -y
                 break; 
