@@ -72,7 +72,7 @@ for x in range(len(file_list)):
     if transcode == 0:
         cmd = full_cmd
     else: 
-        transcode_cmd = f"python colab_interpolate.py --time_step {time_step} --count_ph 2 --input_file '{curr_file}' --output_dir '{out_dir_}' --selective_interpolation 1 --intro_skip {intro_skip} --ending_skip {ending_skip} --use_ffmpeg_dec 1"
+        transcode_cmd = f"python colab_interpolate.py --time_step {time_step} --count_ph 2 --input_file '{curr_file}' --output_dir '{out_dir_}' --selective_interpolation 1 --intro_skip {intro_skip} --ending_skip {ending_skip} --use_ffmpeg_dec 0"
         cmd = transcode_cmd
     print("current command:", cmd)
 
